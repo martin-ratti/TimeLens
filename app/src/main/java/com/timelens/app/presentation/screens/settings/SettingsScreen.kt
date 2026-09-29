@@ -3,6 +3,7 @@ package com.timelens.app.presentation.screens.settings
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -40,6 +41,13 @@ fun SettingsScreen(
 
     var showGoalDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+
+    // Si algún dialog está abierto, interceptamos el gesto "Atrás" para cerrarlo
+    // en lugar de navegar a la pantalla anterior.
+    BackHandler(enabled = showGoalDialog || showAboutDialog) {
+        showGoalDialog = false
+        showAboutDialog = false
+    }
 
     Column(
         modifier = modifier

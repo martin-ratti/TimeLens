@@ -1,5 +1,6 @@
 package com.timelens.app.presentation.screens.onboarding
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,10 @@ fun OnboardingScreen(
     onPermissionGranted: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Bloquea el gesto/botón "Atrás" para que el usuario no salga de la app
+    // sin completar el flujo de permisos requerido.
+    BackHandler(enabled = true) { /* consumido intencionalmente */ }
+
     Column(
         modifier = modifier
             .fillMaxSize()
