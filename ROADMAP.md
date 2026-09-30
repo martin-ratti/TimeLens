@@ -170,9 +170,11 @@
 - [x] Gestión de permisos en tiempo de ejecución (`POST_NOTIFICATIONS` en Android 13+)
 - [x] Panel de prueba y control interactivo en pantalla de Ajustes
 - [x] Tarjeta interactiva de "Resumen de Bienestar" (`WellnessSummaryCard`) en pantalla de inicio con diagnóstico en tiempo real y consejos prácticos
+- [x] Pantalla dedicada de Resumen Diario (`DailySummaryScreen`) con diagnóstico en profundidad, score (0-100), desglose de KPIs y top apps
+- [x] Navegación profunda automática a la pantalla de resumen al tocar la notificación nocturna de bienestar
 
 ### 🎯 Entregable
-> Notificaciones inteligentes funcionando sin drenar batería y tarjeta de diagnóstico diario de bienestar activa.
+> Notificaciones inteligentes funcionando sin drenar batería, tarjeta de diagnóstico en inicio y pantalla dedicada de resumen diario con navegación profunda.
 
 ---
 

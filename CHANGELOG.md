@@ -30,6 +30,19 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - Inclusión de banner de advertencia visual en la pantalla de Ajustes con botón para conceder el permiso en un solo toque, y disparo automático del diálogo nativo del sistema al interactuar con las pruebas.
 
 ### Agregado
+- 📱 **Pantalla Dedicada de Resumen Diario (`DailySummaryScreen`)**:
+  - Pantalla completa y detallada accesible desde la app o directamente al pulsar la notificación diaria.
+  - **Índice y Score de Bienestar (0 a 100 pts)**: Badge de puntuación dinámico con diagnóstico holístico de la jornada (Excelente, Equilibrado, Atención o Límite).
+  - **Tiempo de Pantalla & Objetivo**: Indicador visual de cumplimiento de horas de meta y comparativa porcentual frente a ayer.
+  - **Diagnóstico y Consejos en Detalle**: Despliegue completo de todas las observaciones del día con consejos prácticos accionables (regla 20-20-20, descanso de melatonina, frecuencia de desbloqueos).
+  - **Cuadrícula de Métricas Clave (KPIs)**: Desbloqueos, sesión continua más larga con app involucrada, horario pico y total de aperturas.
+  - **Top Aplicaciones del Día**: Lista de consumo relativo con barras de progreso y tiempos acumulados.
+  - **Compartir Resumen**: Acción nativa para exportar un resumen formateado de hábitos a través del share sheet de Android.
+- 🔗 **Navegación Profunda desde Notificaciones de Bienestar**:
+  - `PendingIntent` enriquecido con `EXTRA_NAV_ROUTE` configurado en `TimeLensNotificationManager` para abrir directamente el resumen del día.
+  - Soporte de apertura tanto en arranque en frío como con la app en segundo plano (`onNewIntent`) en `MainActivity` y `AppNavHost`.
+  - Notificación de resumen con recomendación destacada en el texto principal y botón de acción *"Ver Análisis Completo"*.
+  - Accesos directos a la pantalla desde `HomeScreen` (botón en la barra superior y enlace en `WellnessSummaryCard`) y desde `SettingsScreen`.
 - 🧘 **Tarjeta Interactiva de Diagnóstico y Resumen de Bienestar (`WellnessSummaryCard`)**:
   - Nueva tarjeta inteligente ubicada en la pantalla de inicio (`HomeScreen`) justo después de los KPIs de uso.
   - **Diagnóstico multidimensional en tiempo real**:
