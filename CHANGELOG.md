@@ -37,6 +37,15 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 - 📊 **Interactividad en Gráficos Nativos**:
   - `HourlyBarChart`: Toque en cualquier barra para ver la franja horaria y duración exacta.
   - `WeeklyBarChart`: Toque en cualquier día para ver la fecha completa y tiempo exacto formateado.
+- 🔔 **Sistema Integral de Notificaciones Inteligentes (Fase 5 Completa)**:
+  - 3 canales dedicados (`NotificationChannel`): Alertas de bienestar, Resumen nocturno y Monitoreo en segundo plano.
+  - Alerta automática al superar el objetivo diario de horas de pantalla.
+  - Detección y alerta de sesiones continuas prolongadas (>= 60 min en apps distractoras).
+  - Alerta de nueva sesión récord comparando con el histórico semanal.
+  - `DailySummaryWorker` con `WorkManager` programado para las 22:00 hs con comparativa y app más usada.
+  - `UsageMonitorService` para monitoreo en primer plano (`dataSync`).
+  - Gestión del permiso en tiempo de ejecución `POST_NOTIFICATIONS` en Android 13+.
+  - Panel de pruebas de notificaciones en la pantalla de Ajustes con disparador de alertas y simulación de resumen en tiempo real.
 
 ---
 

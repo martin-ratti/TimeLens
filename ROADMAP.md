@@ -13,7 +13,7 @@
 | Fase 2 — Motor de Métricas | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | Fase 3 — Base de Datos Room | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | Fase 4 — UI con Compose | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| Fase 5 — Notificaciones | ⬜ Pendiente | ░░░░░░░░░░ 0% |
+| Fase 5 — Notificaciones | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | Fase 6 — Testing y Pulido | 🟢 Avanzada | ▓▓▓▓▓▓▓░░░ 70% |
 | Fase 7 — Publicación | ⬜ Pendiente | ░░░░░░░░░░ 0% |
 
@@ -161,12 +161,14 @@
 
 🟢 **Prioridad: Media**
 
-- [ ] Alerta de sesión larga en tiempo real ("Llevás 2h en Instagram")
-- [ ] Resumen diario a las 22:00
-- [ ] Notificación de récord ("Nueva sesión más larga")
-- [ ] Alerta al superar objetivo diario
-- [ ] ForegroundService liviano para monitoreo
-- [ ] Canal de notificación dedicado
+- [x] Canal de notificación dedicado (`NotificationChannel`: Alertas de bienestar, Resumen nocturno y Monitoreo)
+- [x] Alerta de sesión larga en tiempo real ("Llevás 1h en Instagram")
+- [x] Resumen diario a las 22:00 (`DailySummaryWorker`)
+- [x] Notificación de récord ("Nueva sesión más larga")
+- [x] Alerta al superar objetivo diario
+- [x] ForegroundService liviano para monitoreo (`UsageMonitorService`)
+- [x] Gestión de permisos en tiempo de ejecución (`POST_NOTIFICATIONS` en Android 13+)
+- [x] Panel de prueba y control interactivo en pantalla de Ajustes
 
 ### 🎯 Entregable
 > Notificaciones inteligentes funcionando sin drenar batería.
