@@ -179,8 +179,10 @@
 
 - [x] Tests unitarios completos (SessionCalculator, DailySummaryCalculator, TimeFormatter)
 - [x] Corrección de discrepancias en cálculo de tiempo diario y eventos superpuestos
-- [x] Optimización de rendimiento con caché en memoria en `UsageDataSource`
+- [x] Optimización de rendimiento con caché en memoria en `UsageDataSource` y renderizado de ImageBitmap
 - [x] Pruebas y validación en dispositivo físico real con datos reales
+- [x] Unificación estética y responsiva de tarjetas KPI en todas las pantallas
+- [x] Diagnóstico y benchmark de tasa de refresco (60/120 Hz) con `dumpsys gfxinfo`
 - [ ] Tests de integración para DAOs con base de datos en memoria
 - [ ] Tests de UI básicos con Compose Testing
 - [ ] Probar en múltiples versiones de Android (API 26 a API 35)
@@ -230,4 +232,4 @@
 
 ---
 
-*Documento actualizado: 26 de septiembre de 2026*
+*Documento actualizado: 30 de septiembre de 2026*
