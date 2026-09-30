@@ -7,6 +7,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import com.timelens.app.domain.model.AppCategory
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Calendar
@@ -109,10 +112,29 @@ class UsageDataSource @Inject constructor(
         }
     }
 
+    private val appIconBitmapCache = ConcurrentHashMap<String, ImageBitmap?>()
+
     fun getAppIcon(packageName: String): Drawable? {
         return appIconCache.computeIfAbsent(packageName) {
             try {
                 packageManager.getApplicationIcon(packageName)
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    fun getAppIconBitmap(packageName: String): ImageBitmap? {
+        return appIconBitmapCache.computeIfAbsent(packageName) {
+            try {
+                val drawable = getAppIcon(packageName) ?: return@computeIfAbsent null
+                val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 96
+                val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 96
+                val bitmap = drawable.toBitmap(
+                    width = width.coerceIn(48, 144),
+                    height = height.coerceIn(48, 144)
+                )
+                bitmap.asImageBitmap()
             } catch (e: Exception) {
                 null
             }

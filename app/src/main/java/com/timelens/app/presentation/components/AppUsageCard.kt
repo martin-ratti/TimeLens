@@ -1,7 +1,7 @@
 package com.timelens.app.presentation.components
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,16 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.timelens.app.presentation.theme.*
-
 import coil.compose.AsyncImage
-
-import androidx.compose.foundation.clickable
 import com.timelens.app.domain.model.AppCategory
+import com.timelens.app.presentation.theme.*
 
 @Composable
 fun AppUsageCard(
@@ -36,17 +34,6 @@ fun AppUsageCard(
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    var animationPlayed by remember { mutableStateOf(false) }
-    val animatedProgress by animateFloatAsState(
-        targetValue = if (animationPlayed) progress else 0f,
-        animationSpec = tween(durationMillis = 1000, delayMillis = 300),
-        label = "appProgress"
-    )
-
-    LaunchedEffect(Unit) {
-        animationPlayed = true
-    }
-
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -69,19 +56,29 @@ fun AppUsageCard(
                     color = accentColor.copy(alpha = 0.15f)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        if (icon is ImageVector) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = "Icono de $appName",
-                                tint = accentColor,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        } else {
-                            AsyncImage(
-                                model = icon,
-                                contentDescription = "Logo de $appName",
-                                modifier = Modifier.size(24.dp)
-                            )
+                        when (icon) {
+                            is ImageBitmap -> {
+                                Image(
+                                    bitmap = icon,
+                                    contentDescription = "Logo de $appName",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            is ImageVector -> {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = "Icono de $appName",
+                                    tint = accentColor,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            else -> {
+                                AsyncImage(
+                                    model = icon,
+                                    contentDescription = "Logo de $appName",
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -131,7 +128,7 @@ fun AppUsageCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             LinearProgressIndicator(
-                progress = { animatedProgress },
+                progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)

@@ -5,7 +5,7 @@ import android.graphics.drawable.Drawable
 data class AppUsageInfo(
     val packageName: String,
     val appName: String,
-    val icon: Drawable? = null,
+    val icon: Any? = null,
     val totalTimeMs: Long,
     val sessionCount: Int,
     val longestSessionMs: Long,
@@ -26,7 +26,7 @@ enum class AppCategory(val displayName: String) {
 data class AppDetailInfo(
     val packageName: String,
     val appName: String,
-    val icon: Drawable? = null,
+    val icon: Any? = null,
     val category: AppCategory = AppCategory.OTHER,
     val totalTimeMs: Long = 0L,
     val sessionCount: Int = 0,

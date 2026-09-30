@@ -1,5 +1,6 @@
 package com.timelens.app.presentation.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -31,10 +33,14 @@ fun CircularProgressCard(
     goalHours: Int = 6,
     modifier: Modifier = Modifier
 ) {
-    var animationPlayed by remember { mutableStateOf(false) }
+    var animationPlayed by rememberSaveable { mutableStateOf(false) }
     val animatedProgress by animateFloatAsState(
         targetValue = if (animationPlayed) progress else 0f,
-        animationSpec = tween(durationMillis = 1500, delayMillis = 200),
+        animationSpec = tween(
+            durationMillis = 1000,
+            delayMillis = 150,
+            easing = FastOutSlowInEasing
+        ),
         label = "progress"
     )
 
@@ -75,6 +81,9 @@ fun CircularProgressCard(
             Spacer(modifier = Modifier.height(20.dp))
 
             val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+            val gradientBrush = remember {
+                Brush.sweepGradient(listOf(NeonBlue, NeonPurple, NeonBlue))
+            }
 
             Box(
                 contentAlignment = Alignment.Center,
@@ -101,9 +110,7 @@ fun CircularProgressCard(
 
                     // Progress arc with gradient
                     drawArc(
-                        brush = Brush.sweepGradient(
-                            colors = listOf(NeonBlue, NeonPurple, NeonBlue)
-                        ),
+                        brush = gradientBrush,
                         startAngle = -90f,
                         sweepAngle = animatedProgress * 360f,
                         useCenter = false,

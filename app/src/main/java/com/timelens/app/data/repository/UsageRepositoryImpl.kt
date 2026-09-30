@@ -55,8 +55,8 @@ class UsageRepositoryImpl @Inject constructor(
 
         val totalTime = apps.sumOf { it.totalTimeMs }
         // Only decode and load icons for the apps that will actually be shown!
-        val topApps = apps.take(10).map { app ->
-            app.copy(icon = dataSource.getAppIcon(app.packageName))
+        val topApps = apps.take(25).map { app ->
+            app.copy(icon = dataSource.getAppIconBitmap(app.packageName))
         }
 
         val longestSessionAppInfo = apps.find { it.packageName == metrics.longestSessionAppPackage }
@@ -105,7 +105,7 @@ class UsageRepositoryImpl @Inject constructor(
             AppUsageInfo(
                 packageName = packageName,
                 appName = dataSource.getAppName(packageName),
-                icon = dataSource.getAppIcon(packageName),
+                icon = dataSource.getAppIconBitmap(packageName),
                 totalTimeMs = totalTimeMs,
                 sessionCount = metrics.appSessionCountMap[packageName] ?: 0,
                 longestSessionMs = if (metrics.longestSessionAppPackage == packageName) metrics.longestSessionMs else 0L,
@@ -129,7 +129,7 @@ class UsageRepositoryImpl @Inject constructor(
         val appEntities = appDailyUsageDao.getByDate(dateString)
 
         val topApps = appEntities.take(5).map {
-            it.toDomain(dataSource.getAppIcon(it.packageName))
+            it.toDomain(dataSource.getAppIconBitmap(it.packageName))
         }
 
         entity.toDomain(topApps, dataSource.getAppName(entity.longestSessionApp))
@@ -226,7 +226,7 @@ class UsageRepositoryImpl @Inject constructor(
         com.timelens.app.domain.model.AppDetailInfo(
             packageName = packageName,
             appName = dataSource.getAppName(packageName),
-            icon = dataSource.getAppIcon(packageName),
+            icon = dataSource.getAppIconBitmap(packageName),
             category = dataSource.getAppCategory(packageName),
             totalTimeMs = totalTimeMs,
             sessionCount = sessionCount,
