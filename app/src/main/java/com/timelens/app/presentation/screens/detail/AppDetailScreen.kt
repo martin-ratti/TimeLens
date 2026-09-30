@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.timelens.app.domain.model.AppDetailInfo
 import com.timelens.app.presentation.components.HourlyBarChart
+import com.timelens.app.presentation.components.StatCard
 import com.timelens.app.presentation.components.WeeklyBarChart
 import com.timelens.app.presentation.theme.*
 import com.timelens.app.util.TimeFormatter
@@ -163,18 +164,21 @@ fun AppDetailContent(detail: AppDetailInfo) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                DetailStatCard(
+                StatCard(
                     icon = Icons.Outlined.AccessTime,
                     title = "Tiempo hoy",
                     value = TimeFormatter.formatMillisToShort(detail.totalTimeMs),
-                    color = NeonBlue,
+                    accentColor = NeonBlue,
+                    horizontalAlignment = Alignment.Start,
                     modifier = Modifier.weight(1f)
                 )
-                DetailStatCard(
+                StatCard(
                     icon = Icons.Outlined.TouchApp,
                     title = "Aperturas",
                     value = "${detail.sessionCount}",
-                    color = NeonOrange,
+                    subtitle = "sesiones",
+                    accentColor = NeonOrange,
+                    horizontalAlignment = Alignment.Start,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -185,18 +189,20 @@ fun AppDetailContent(detail: AppDetailInfo) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                DetailStatCard(
+                StatCard(
                     icon = Icons.Outlined.Timer,
                     title = "Sesión máx.",
                     value = TimeFormatter.formatMillisToShort(detail.longestSessionMs),
-                    color = NeonPurple,
+                    accentColor = NeonPurple,
+                    horizontalAlignment = Alignment.Start,
                     modifier = Modifier.weight(1f)
                 )
-                DetailStatCard(
+                StatCard(
                     icon = Icons.Outlined.Equalizer,
                     title = "Promedio/sesión",
                     value = TimeFormatter.formatMillisToShort(detail.avgSessionMs),
-                    color = NeonGreen,
+                    accentColor = NeonGreen,
+                    horizontalAlignment = Alignment.Start,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -288,46 +294,6 @@ fun AppDetailContent(detail: AppDetailInfo) {
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun DetailStatCard(
-    icon: ImageVector,
-    title: String,
-    value: String,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
         }
     }
 }

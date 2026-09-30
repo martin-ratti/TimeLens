@@ -176,7 +176,7 @@ fun HomeContent(
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StatCard(
                     icon = Icons.Outlined.LockOpen,
@@ -188,7 +188,7 @@ fun HomeContent(
                 )
                 StatCard(
                     icon = Icons.Outlined.Timer,
-                    title = "Sesión max",
+                    title = "Sesión máx.",
                     value = summary.longestSession?.durationMs?.let { TimeFormatter.formatMillisToShort(it) } ?: "0m",
                     subtitle = summary.longestSession?.appName ?: "Sin uso",
                     accentColor = NeonPurple,

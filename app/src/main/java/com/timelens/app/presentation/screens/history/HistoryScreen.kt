@@ -16,7 +16,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
+import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.timelens.app.domain.model.DaySummary
+import com.timelens.app.presentation.components.StatCard
 import com.timelens.app.presentation.components.WeeklyBarChart
 import com.timelens.app.presentation.theme.NeonBlue
 import com.timelens.app.presentation.theme.NeonGreen
@@ -141,68 +145,30 @@ fun HistoryContent(weeklyData: List<DaySummary>) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Card(
-                    modifier = Modifier.weight(1f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = "Total semanal",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = TimeFormatter.formatMillisToShort(totalWeeklyMs),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonPurple
-                        )
-                    }
-                }
-
-                Card(
-                    modifier = Modifier.weight(1f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = "Promedio diario",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = TimeFormatter.formatMillisToShort(avgTimeMs),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonBlue
-                        )
-                    }
-                }
-
-                Card(
-                    modifier = Modifier.weight(1f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = "Desbloqueos",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "$totalUnlocks",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonOrange
-                        )
-                    }
-                }
+                StatCard(
+                    icon = Icons.Outlined.DateRange,
+                    title = "Total sem.",
+                    value = TimeFormatter.formatMillisToShort(totalWeeklyMs),
+                    subtitle = "${weeklyData.size} días",
+                    accentColor = NeonPurple,
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    icon = Icons.Outlined.Speed,
+                    title = "Promedio",
+                    value = TimeFormatter.formatMillisToShort(avgTimeMs),
+                    subtitle = "por día",
+                    accentColor = NeonBlue,
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    icon = Icons.Outlined.LockOpen,
+                    title = "Desbloqueos",
+                    value = "$totalUnlocks",
+                    subtitle = "total",
+                    accentColor = NeonOrange,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
@@ -235,77 +201,22 @@ fun HistoryContent(weeklyData: List<DaySummary>) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Card(
-                    modifier = Modifier.weight(1f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.EmojiEvents,
-                            contentDescription = null,
-                            tint = NeonGreen,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Menor uso",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = bestDay?.date?.format(dayFormatter)?.replaceFirstChar { it.uppercase() } ?: "-",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = bestDay?.let { TimeFormatter.formatMillisToShort(it.totalScreenTimeMs) } ?: "0m",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NeonGreen,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
-                Card(
-                    modifier = Modifier.weight(1f),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Warning,
-                            contentDescription = null,
-                            tint = NeonOrange,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Mayor uso",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = worstDay?.date?.format(dayFormatter)?.replaceFirstChar { it.uppercase() } ?: "-",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = worstDay?.let { TimeFormatter.formatMillisToShort(it.totalScreenTimeMs) } ?: "0m",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NeonOrange,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
+                StatCard(
+                    icon = Icons.Outlined.EmojiEvents,
+                    title = "Menor uso",
+                    value = bestDay?.let { TimeFormatter.formatMillisToShort(it.totalScreenTimeMs) } ?: "0m",
+                    subtitle = bestDay?.date?.format(dayFormatter)?.replaceFirstChar { it.uppercase() } ?: "-",
+                    accentColor = NeonGreen,
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    icon = Icons.Outlined.Warning,
+                    title = "Mayor uso",
+                    value = worstDay?.let { TimeFormatter.formatMillisToShort(it.totalScreenTimeMs) } ?: "0m",
+                    subtitle = worstDay?.date?.format(dayFormatter)?.replaceFirstChar { it.uppercase() } ?: "-",
+                    accentColor = NeonOrange,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
