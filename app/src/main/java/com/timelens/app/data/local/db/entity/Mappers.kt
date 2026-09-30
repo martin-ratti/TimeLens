@@ -12,7 +12,13 @@ fun DailyUsageEntity.toDomain(topApps: List<AppUsageInfo>, appName: String): Day
         totalUnlocks = this.totalUnlocks,
         topApps = topApps,
         longestSession = if (this.longestSessionApp.isNotEmpty()) {
-            Session(this.longestSessionApp, appName, this.longestSessionMs, 0L, 0L)
+            Session(
+                packageName = this.longestSessionApp,
+                appName = appName,
+                startTimeMs = 0L,
+                endTimeMs = this.longestSessionMs,
+                durationMs = this.longestSessionMs
+            )
         } else null,
         peakHour = this.peakHour,
         totalSessions = this.totalSessions

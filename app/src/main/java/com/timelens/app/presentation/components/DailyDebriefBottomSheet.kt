@@ -258,6 +258,13 @@ fun DailyDebriefBottomSheet(
                         )
                     }
                 }
+
+                HabitHighlightItem(
+                    icon = Icons.Outlined.CenterFocusStrong,
+                    iconTint = NeonGreen,
+                    title = "Momento más productivo: ${String.format(Locale.getDefault(), "%02d:00", summary.productiveHour)} hs",
+                    subtitle = "Franja de menor uso de pantalla y mayor desconexión"
+                )
             }
 
             // 3. Recomendaciones Personalizadas Dinámicas (Múltiples)

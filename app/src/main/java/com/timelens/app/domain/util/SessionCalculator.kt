@@ -3,21 +3,60 @@ package com.timelens.app.domain.util
 import android.app.usage.UsageEvents
 import java.util.Calendar
 
+data class UsageEventModel(
+    val packageName: String?,
+    val eventType: Int,
+    val timeStamp: Long
+)
+
 data class MetricsResult(
     val totalUnlocks: Int,
     val longestSessionMs: Long,
     val longestSessionAppPackage: String?,
     val peakHour: Int,
+    val productiveHour: Int = 9,
     val totalSessions: Int,
     val appUsageMap: Map<String, Long>,
     val appSessionCountMap: Map<String, Int>
 )
 
 object SessionCalculator {
+
+    fun calculateProductiveHour(
+        hourUsageMap: Map<Int, Long>,
+        activeWindowStart: Int = 8,
+        activeWindowEnd: Int = 21,
+        currentHour: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    ): Int {
+        val maxHour = if (currentHour in activeWindowStart..activeWindowEnd) currentHour else activeWindowEnd
+        val validHours = (activeWindowStart..maxHour).toList()
+        if (validHours.isEmpty()) return activeWindowStart
+
+        return validHours.minByOrNull { hour ->
+            hourUsageMap[hour] ?: 0L
+        } ?: activeWindowStart
+    }
+
     fun calculateMetrics(
         eventsList: List<UsageEvents.Event>,
         startTimeMs: Long,
         isEligibleApp: (String) -> Boolean = { true }
+    ): MetricsResult {
+        val models = eventsList.map {
+            UsageEventModel(
+                packageName = it.packageName,
+                eventType = it.eventType,
+                timeStamp = it.timeStamp
+            )
+        }
+        return calculateMetricsFromModels(models, startTimeMs, isEligibleApp)
+    }
+
+    fun calculateMetricsFromModels(
+        eventsList: List<UsageEventModel>,
+        startTimeMs: Long,
+        isEligibleApp: (String) -> Boolean = { true },
+        evalCurrentTime: Long? = null
     ): MetricsResult {
         var unlocks = 0
         var longestSessionMs = 0L
@@ -30,8 +69,11 @@ object SessionCalculator {
         var sessionStartTime: Long = 0L
         var pendingPauseTime: Long? = null
 
-        fun recordSession(app: String, start: Long, duration: Long) {
-            if (duration <= 0 || !isEligibleApp(app)) return
+        fun recordSession(app: String, rawStart: Long, endTime: Long) {
+            val start = maxOf(rawStart, startTimeMs)
+            if (endTime <= start || !isEligibleApp(app)) return
+            val duration = endTime - start
+
             // Ignore corrupted sessions longer than 12 hours
             if (duration > 12 * 60 * 60 * 1000L) return
 
@@ -52,7 +94,7 @@ object SessionCalculator {
             val app = currentApp ?: return
             val start = sessionStartTime
             if (endTime > start) {
-                recordSession(app, start, endTime - start)
+                recordSession(app, start, endTime)
             }
             currentApp = null
             sessionStartTime = 0L
@@ -62,11 +104,16 @@ object SessionCalculator {
         for (event in eventsList) {
             when (event.eventType) {
                 // Keyguard hidden / device unlocked
-                18 -> unlocks++
+                18 -> {
+                    if (event.timeStamp >= startTimeMs) {
+                        unlocks++
+                    }
+                }
 
                 // Foreground Activity Resumed / Move to Foreground
                 1 -> {
-                    if (event.packageName == currentApp) {
+                    val pkg = event.packageName
+                    if (pkg == currentApp) {
                         // Navigating within the same app - cancel pending pause
                         pendingPauseTime = null
                     } else {
@@ -74,7 +121,7 @@ object SessionCalculator {
                         val effectiveEndTime = pendingPauseTime ?: event.timeStamp
                         closeCurrentSession(effectiveEndTime)
 
-                        currentApp = event.packageName
+                        currentApp = pkg
                         sessionStartTime = event.timeStamp
                         pendingPauseTime = null
                     }
@@ -103,12 +150,13 @@ object SessionCalculator {
 
         // Close any ongoing active session at the current time
         if (currentApp != null) {
-            val currentTime = System.currentTimeMillis()
+            val currentTime = evalCurrentTime ?: System.currentTimeMillis()
             val effectiveEndTime = pendingPauseTime ?: currentTime
             closeCurrentSession(effectiveEndTime)
         }
 
         val peakHour = hourUsageMap.maxByOrNull { it.value }?.key ?: 0
+        val productiveHour = calculateProductiveHour(hourUsageMap)
         val totalSessions = appSessionCountMap.values.sum()
 
         return MetricsResult(
@@ -116,6 +164,7 @@ object SessionCalculator {
             longestSessionMs = longestSessionMs,
             longestSessionAppPackage = longestSessionAppPackage,
             peakHour = peakHour,
+            productiveHour = productiveHour,
             totalSessions = totalSessions,
             appUsageMap = appUsageMap,
             appSessionCountMap = appSessionCountMap
@@ -125,6 +174,21 @@ object SessionCalculator {
     fun calculateAppHourlyUsage(
         eventsList: List<UsageEvents.Event>,
         targetPackage: String
+    ): Map<Int, Long> {
+        val models = eventsList.map {
+            UsageEventModel(
+                packageName = it.packageName,
+                eventType = it.eventType,
+                timeStamp = it.timeStamp
+            )
+        }
+        return calculateAppHourlyUsageFromModels(models, targetPackage)
+    }
+
+    fun calculateAppHourlyUsageFromModels(
+        eventsList: List<UsageEventModel>,
+        targetPackage: String,
+        evalCurrentTime: Long? = null
     ): Map<Int, Long> {
         val hourlyMap = (0..23).associateWith { 0L }.toMutableMap()
         var currentApp: String? = null
@@ -174,7 +238,7 @@ object SessionCalculator {
         }
 
         if (currentApp == targetPackage) {
-            val currentTime = System.currentTimeMillis()
+            val currentTime = evalCurrentTime ?: System.currentTimeMillis()
             val effectiveEndTime = pendingPauseTime ?: currentTime
             closeSession(effectiveEndTime)
         }

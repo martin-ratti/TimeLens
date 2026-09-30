@@ -247,34 +247,53 @@ fun HomeContent(
         }
 
         item {
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                StatCard(
-                    icon = Icons.Outlined.LockOpen,
-                    title = "Desbloqueos",
-                    value = summary.totalUnlocks.toString(),
-                    subtitle = "hoy",
-                    accentColor = NeonOrange,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    icon = Icons.Outlined.Timer,
-                    title = "Sesión máx.",
-                    value = summary.longestSession?.durationMs?.let { TimeFormatter.formatMillisToShort(it) } ?: "0m",
-                    subtitle = summary.longestSession?.appName ?: "Sin uso",
-                    accentColor = NeonPurple,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    icon = Icons.Outlined.Schedule,
-                    title = "Horario pico",
-                    value = TimeFormatter.getTimeOfDayLabel(summary.peakHour),
-                    subtitle = String.format(java.util.Locale.getDefault(), "%02d:00", summary.peakHour),
-                    accentColor = NeonBlue,
-                    modifier = Modifier.weight(1f)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    StatCard(
+                        icon = Icons.Outlined.LockOpen,
+                        title = "Desbloqueos",
+                        value = summary.totalUnlocks.toString(),
+                        subtitle = "hoy",
+                        accentColor = NeonOrange,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        icon = Icons.Outlined.Timer,
+                        title = "Sesión máx.",
+                        value = summary.longestSession?.durationMs?.let { TimeFormatter.formatMillisToShort(it) } ?: "0m",
+                        subtitle = summary.longestSession?.appName ?: "Sin uso",
+                        accentColor = NeonPurple,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    StatCard(
+                        icon = Icons.Outlined.Schedule,
+                        title = "Horario pico",
+                        value = TimeFormatter.getTimeOfDayLabel(summary.peakHour),
+                        subtitle = String.format(java.util.Locale.getDefault(), "%02d:00", summary.peakHour),
+                        accentColor = NeonBlue,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        icon = Icons.Outlined.CenterFocusStrong,
+                        title = "Más productivo",
+                        value = TimeFormatter.getTimeOfDayLabel(summary.productiveHour),
+                        subtitle = String.format(java.util.Locale.getDefault(), "%02d:00", summary.productiveHour),
+                        accentColor = NeonGreen,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 

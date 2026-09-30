@@ -9,5 +9,6 @@ data class DaySummary(
     val topApps: List<AppUsageInfo>,
     val longestSession: Session?,
     val peakHour: Int,
+    val productiveHour: Int = 9,
     val totalSessions: Int
 )

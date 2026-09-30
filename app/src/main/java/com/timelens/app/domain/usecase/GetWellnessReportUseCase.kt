@@ -275,6 +275,21 @@ class GetWellnessReportUseCase @Inject constructor() {
             }
         }
 
+        // 7. Regla de Franja Más Productiva (Mayor Enfoque)
+        if (summary.totalScreenTimeMs > 0 && summary.productiveHour in 8..21) {
+            val prodHourFormatted = String.format(Locale.getDefault(), "%02d:00", summary.productiveHour)
+            insights.add(
+                WellnessInsight(
+                    id = "productive_focus_hour",
+                    title = "Franja de mayor enfoque ($prodHourFormatted hs)",
+                    message = "A las $prodHourFormatted hs registraste el menor uso del teléfono en tu día, manteniendo desconexión y presencia mental.",
+                    actionTip = "Aprovechá este horario de bajo uso digital para programar tus tareas de mayor complejidad o estudio.",
+                    level = InsightLevel.EXCELLENT,
+                    category = InsightCategory.APP_BALANCE
+                )
+            )
+        }
+
         // Ordenamiento de Insights (CRITICAL -> ATTENTION -> EXCELLENT -> MODERATE)
         val sortedInsights = insights.sortedBy { insight ->
             if (isNightReview && insight.id == "night_closing_review") -1

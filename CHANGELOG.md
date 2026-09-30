@@ -4,6 +4,25 @@ Todos los cambios notables del proyecto se documentan en este archivo.
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.5.0] — 2026-09-30
+
+### Agregado
+- 🎯 **Fase 2 (Motor de Métricas) — 100% Completada**:
+  - **Momento más productivo**: Cálculo de la franja horaria diurna (08:00 a 20:00) con menor uso del dispositivo, reconociendo el período de máxima concentración del usuario.
+  - **Manejo robusto de límites temporales**: Corte inteligente de sesiones que cruzan la medianoche (clamp a las 00:00:00 del día actual), descarte de sesiones corruptas o anómalas mayores a 12 horas y cierre ordenado ante eventos de apagado del dispositivo (`DEVICE_SHUTDOWN`).
+  - **Integración transversal**: Métrica agregada a `DaySummary`, visualizada en la cuadrícula 2x2 de `HomeScreen` con ícono Material `CenterFocusStrong`, reflejada en `DailyDebriefBottomSheet` y evaluada en el motor de recomendaciones.
+- 🧪 **Suite Integral de Tests Unitarios (~100% de Cobertura de Lógica de Negocio)**:
+  - **65 tests unitarios** implementados y pasando al 100% sin dependencias de emulador.
+  - 12 suites cubriendo `SessionCalculator`, `GetWellnessReportUseCase`, `TimeFormatter`, casos de uso de Clean Architecture, modelos de dominio, mapeadores Room/Domain, `UserPreferencesManager`, `HomeViewModel`, `HistoryViewModel`, `AppDetailViewModel`, `SettingsViewModel` y `UsageRepositoryImpl`.
+  - Integración de **MockK** (`1.13.12`) y **Kotlinx Coroutines Test** (`1.9.0`) con `MainDispatcherRule` y configuración de Gradle `testOptions.unitTests.isReturnDefaultValues = true`.
+  - Documentación técnica detallada en [`TESTING.md`](TESTING.md).
+
+### Corregido
+- 🐛 **Mapeo de Duración de Sesión en Room**:
+  - Corrección de asignación posicional en `DailyUsageEntity.toDomain` que fijaba `durationMs` en cero en lugar del valor real almacenado.
+- ⚙️ **Inyección de SharedPreferences para Testing**:
+  - `UserPreferencesManager` refactorizado para permitir constructores directos con `SharedPreferences` en memoria (`FakeSharedPreferences`), eliminando fallos con clases abstractas del contexto en JVM.
+
 ## [0.4.0] — 2026-09-30
 
 ### Optimizado

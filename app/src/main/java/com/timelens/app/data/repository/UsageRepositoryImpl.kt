@@ -78,6 +78,7 @@ class UsageRepositoryImpl @Inject constructor(
             topApps = topApps,
             longestSession = longestSession,
             peakHour = metrics.peakHour,
+            productiveHour = metrics.productiveHour,
             totalSessions = metrics.totalSessions
         )
 

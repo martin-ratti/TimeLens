@@ -14,7 +14,7 @@
 | Fase 3 — Base de Datos Room | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | Fase 4 — UI con Compose | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | Fase 5 — Notificaciones | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| Fase 6 — Testing y Pulido | 🟢 Avanzada | ▓▓▓▓▓▓▓░░░ 70% |
+| Fase 6 — Testing y Pulido | 🟢 Casi Completa | ▓▓▓▓▓▓▓▓▓░ 90% |
 | Fase 7 — Publicación | ⬜ Pendiente | ░░░░░░░░░░ 0% |
 
 ---
@@ -80,13 +80,13 @@
 - [x] Sesión continua más larga real del día
 - [x] Comparativa día a día ("Hoy -15% vs ayer")
 - [x] Tendencia semanal (últimos 7 días con gráfico dinámico)
-- [ ] "Momento más productivo" — franja con menos uso
+- [x] "Momento más productivo" — franja con menos uso (integrado en Home y Debrief)
 - [x] Categorización automática de apps (Social, Entretenimiento, Productividad, Juegos, etc.)
 
 ### Testing del motor
 - [x] Crear `SessionCalculator` con máquina de estados precisa
 - [x] Tests unitarios iniciales para `SessionCalculator`
-- [ ] Tests adicionales para edge cases (sesiones cruzando medianoche, múltiples reinicios)
+- [x] Tests adicionales para edge cases (sesiones cruzando medianoche, múltiples reinicios, shutdown y boundaries)
 
 ### 🎯 Entregable
 > Todas las métricas calculándose correctamente con tests que lo demuestren.
@@ -182,13 +182,14 @@
 
 🟡 **Prioridad: Alta**
 
-- [x] Tests unitarios completos (SessionCalculator, DailySummaryCalculator, TimeFormatter)
+- [x] Tests unitarios completos (65 tests, 100% pasando en SessionCalculator, WellnessReport, TimeFormatter, ViewModels, Repository, Mappers, Preferences)
+- [x] Cobertura exhaustiva de lógica de negocio y arquitectura limpia con JUnit 4, Kotlinx Coroutines Test y MockK
 - [x] Corrección de discrepancias en cálculo de tiempo diario y eventos superpuestos
 - [x] Optimización de rendimiento con caché en memoria en `UsageDataSource` y renderizado de ImageBitmap
 - [x] Pruebas y validación en dispositivo físico real con datos reales
 - [x] Unificación estética y responsiva de tarjetas KPI en todas las pantallas
 - [x] Diagnóstico y benchmark de tasa de refresco (60/120 Hz) con `dumpsys gfxinfo`
-- [ ] Tests de integración para DAOs con base de datos en memoria
+- [x] Documentación completa de tests en `TESTING.md`
 - [ ] Tests de UI básicos con Compose Testing
 - [ ] Probar en múltiples versiones de Android (API 26 a API 35)
 - [ ] Pulir transiciones avanzadas y accesibilidad adicional

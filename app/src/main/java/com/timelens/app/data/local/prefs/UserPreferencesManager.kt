@@ -10,11 +10,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class UserPreferencesManager @Inject constructor(
-    @ApplicationContext private val context: Context
+class UserPreferencesManager(
+    private val prefs: SharedPreferences
 ) {
-    private val prefs: SharedPreferences =
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(
         context.getSharedPreferences("timelens_user_prefs", Context.MODE_PRIVATE)
+    )
 
     private val _dailyGoalHours = MutableStateFlow(prefs.getInt("daily_goal_hours", 6))
     val dailyGoalHours: StateFlow<Int> = _dailyGoalHours.asStateFlow()
