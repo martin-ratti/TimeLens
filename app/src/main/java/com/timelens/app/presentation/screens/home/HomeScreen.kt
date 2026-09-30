@@ -1,6 +1,8 @@
 package com.timelens.app.presentation.screens.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -10,9 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -132,7 +133,11 @@ fun HomeContent(
     onAppClick: (String) -> Unit = {}
 ) {
     val dailyGoalMs = dailyGoalHours * 60 * 60 * 1000L
-    val progress = (summary.totalScreenTimeMs.toFloat() / dailyGoalMs).coerceIn(0f, 1f)
+    val progress = if (dailyGoalMs > 0L) {
+        (summary.totalScreenTimeMs.toFloat() / dailyGoalMs).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
 
     val categoryUsage = remember(summary.topApps) {
         summary.topApps
@@ -140,6 +145,16 @@ fun HomeContent(
             .mapValues { entry -> entry.value.sumOf { it.totalTimeMs } }
             .toList()
             .sortedByDescending { it.second }
+    }
+
+    var selectedCategory by rememberSaveable { mutableStateOf<AppCategory?>(null) }
+
+    val filteredApps = remember(summary.topApps, selectedCategory) {
+        if (selectedCategory == null) {
+            summary.topApps
+        } else {
+            summary.topApps.filter { (it.category ?: AppCategory.OTHER) == selectedCategory }
+        }
     }
     
     LazyColumn(
@@ -217,7 +232,39 @@ fun HomeContent(
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Chip "Todas"
+                    item(key = "all_categories") {
+                        val isSelected = selectedCategory == null
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) NeonBlue.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
+                            border = if (isSelected) BorderStroke(1.dp, NeonBlue) else null,
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .clickable { selectedCategory = null }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "Todas",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isSelected) NeonBlue else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "${summary.topApps.size}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (isSelected) NeonBlue.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+
                     items(items = categoryUsage, key = { it.first.name }) { (category, timeMs) ->
+                        val isSelected = selectedCategory == category
                         val catColor = when (category) {
                             AppCategory.SOCIAL -> NeonPurple
                             AppCategory.ENTERTAINMENT -> NeonOrange
@@ -229,8 +276,13 @@ fun HomeContent(
 
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            color = if (isSelected) catColor.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
+                            border = if (isSelected) BorderStroke(1.dp, catColor) else null,
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .clickable {
+                                    selectedCategory = if (selectedCategory == category) null else category
+                                }
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -247,12 +299,12 @@ fun HomeContent(
                                     text = category.displayName,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = if (isSelected) catColor else MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = TimeFormatter.formatMillisToShort(timeMs),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    color = if (isSelected) catColor.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                 )
                             }
                         }
@@ -274,7 +326,7 @@ fun HomeContent(
                     modifier = Modifier.size(24.dp)
                 )
                 Text(
-                    text = "Apps más usadas",
+                    text = if (selectedCategory != null) "Apps: ${selectedCategory?.displayName}" else "Apps más usadas",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -282,17 +334,39 @@ fun HomeContent(
             }
         }
 
-        items(items = summary.topApps, key = { it.packageName }) { appInfo ->
-            AppUsageCard(
-                icon = appInfo.icon ?: Icons.Outlined.Apps,
-                appName = appInfo.appName,
-                usageTime = TimeFormatter.formatMillisToShort(appInfo.totalTimeMs),
-                progress = (appInfo.totalTimeMs.toFloat() / summary.totalScreenTimeMs).coerceIn(0f, 1f),
-                accentColor = NeonPurple,
-                sessionCount = appInfo.sessionCount,
-                category = appInfo.category,
-                onClick = { onAppClick(appInfo.packageName) }
-            )
+        if (filteredApps.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No hay aplicaciones en esta categoría hoy.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            }
+        } else {
+            items(items = filteredApps, key = { it.packageName }) { appInfo ->
+                val appProgress = if (summary.totalScreenTimeMs > 0L) {
+                    (appInfo.totalTimeMs.toFloat() / summary.totalScreenTimeMs).coerceIn(0f, 1f)
+                } else {
+                    0f
+                }
+                AppUsageCard(
+                    icon = appInfo.icon ?: Icons.Outlined.Apps,
+                    appName = appInfo.appName,
+                    usageTime = TimeFormatter.formatMillisToShort(appInfo.totalTimeMs),
+                    progress = appProgress,
+                    accentColor = NeonPurple,
+                    sessionCount = appInfo.sessionCount,
+                    category = appInfo.category,
+                    onClick = { onAppClick(appInfo.packageName) }
+                )
+            }
         }
     }
 }

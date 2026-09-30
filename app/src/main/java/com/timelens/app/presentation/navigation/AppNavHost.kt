@@ -106,7 +106,13 @@ fun AppNavHost(
                         navController.navigate(NavRoutes.AppDetail.createRoute(packageName))
                     },
                     onNavigateToSettings = {
-                        navController.navigate(NavRoutes.Settings.route)
+                        navController.navigate(NavRoutes.Settings.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }

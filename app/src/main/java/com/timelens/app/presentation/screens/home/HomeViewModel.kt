@@ -41,6 +41,14 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadData()
+        viewModelScope.launch {
+            prefsManager.dailyGoalHours.collect { newGoal ->
+                val current = _uiState.value
+                if (current is HomeUiState.Success && current.dailyGoalHours != newGoal) {
+                    _uiState.value = current.copy(dailyGoalHours = newGoal)
+                }
+            }
+        }
     }
 
     fun loadData() {
