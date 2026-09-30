@@ -12,6 +12,7 @@
 
     <!-- Permiso para servicio en primer plano -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Permiso para reprogramar tras reinicio -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -40,6 +41,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".service.UsageMonitorService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
     </application>
 
 </manifest>

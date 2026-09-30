@@ -1,12 +1,19 @@
 package com.timelens.app.presentation.screens.settings
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +48,31 @@ fun SettingsScreen(
 
     var showGoalDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        viewModel.toggleNotifications(isGranted)
+        if (isGranted) {
+            Toast.makeText(context, "Notificaciones activadas", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Permiso de notificaciones denegado", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val onToggleNotifications: (Boolean) -> Unit = { enable ->
+        if (enable) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                viewModel.toggleNotifications(true)
+            }
+        } else {
+            viewModel.toggleNotifications(false)
+        }
+    }
 
     // Si algún dialog está abierto, interceptamos el gesto "Atrás" para cerrarlo
     // en lugar de navegar a la pantalla anterior.
@@ -97,11 +129,11 @@ fun SettingsScreen(
                 title = "Notificaciones",
                 subtitle = if (notificationsEnabled) "Alertas de bienestar activadas" else "Alertas desactivadas",
                 iconTint = NeonBlue,
-                onClick = { viewModel.toggleNotifications(!notificationsEnabled) },
+                onClick = { onToggleNotifications(!notificationsEnabled) },
                 action = {
                     Switch(
                         checked = notificationsEnabled,
-                        onCheckedChange = { viewModel.toggleNotifications(it) },
+                        onCheckedChange = { onToggleNotifications(it) },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = NeonBlue,
                             checkedTrackColor = NeonBlue.copy(alpha = 0.5f)
@@ -109,6 +141,78 @@ fun SettingsScreen(
                     )
                 }
             )
+
+            // Tarjeta de pruebas de notificación cuando están activadas
+            if (notificationsEnabled) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    border = BorderStroke(1.dp, NeonBlue.copy(alpha = 0.2f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.NotificationsActive,
+                                contentDescription = null,
+                                tint = NeonBlue,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "Probar Notificaciones",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Text(
+                            text = "Presioná para recibir una alerta inmediata o simular el resumen nocturno de las 22:00 hs.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.sendTestNotification()
+                                    Toast.makeText(context, "Notificación de alerta enviada", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, NeonBlue.copy(alpha = 0.5f)),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                            ) {
+                                Text("Probar alerta", color = NeonBlue, fontSize = 12.sp, maxLines = 1)
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.triggerDailySummaryTest()
+                                    Toast.makeText(context, "Generando resumen diario...", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, NeonPurple.copy(alpha = 0.5f)),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                            ) {
+                                Text("Probar resumen", color = NeonPurple, fontSize = 12.sp, maxLines = 1)
+                            }
+                        }
+                    }
+                }
+            }
 
             // Tema (Oscuro / Claro)
             SettingItem(

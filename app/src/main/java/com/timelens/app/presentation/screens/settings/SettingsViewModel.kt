@@ -3,19 +3,21 @@ package com.timelens.app.presentation.screens.settings
 import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.timelens.app.data.local.db.dao.DailyUsageDao
 import com.timelens.app.data.local.prefs.UserPreferencesManager
+import com.timelens.app.notification.TimeLensNotificationManager
+import com.timelens.app.service.UsageMonitorService
+import com.timelens.app.worker.NotificationWorkScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val prefsManager: UserPreferencesManager,
     private val dailyUsageDao: DailyUsageDao,
+    private val notificationManager: TimeLensNotificationManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -29,6 +31,26 @@ class SettingsViewModel @Inject constructor(
 
     fun toggleNotifications(enabled: Boolean) {
         prefsManager.setNotificationsEnabled(enabled)
+        if (enabled) {
+            notificationManager.createNotificationChannels()
+            NotificationWorkScheduler.scheduleAll(context)
+        } else {
+            NotificationWorkScheduler.cancelAll(context)
+            notificationManager.cancelAll()
+            UsageMonitorService.stop(context)
+        }
+    }
+
+    fun sendTestNotification() {
+        notificationManager.showTestNotification()
+    }
+
+    fun triggerDailySummaryTest() {
+        NotificationWorkScheduler.triggerImmediateDailySummary(context)
+    }
+
+    fun triggerAlertCheckTest() {
+        NotificationWorkScheduler.triggerImmediateAlertCheck(context)
     }
 
     fun toggleDarkTheme(enabled: Boolean) {
