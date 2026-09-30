@@ -20,7 +20,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - Jerarquía tipográfica pulida y adaptativa para evitar desbordes y cortes de texto en pantallas compactas (360dp a 390dp).
   - Unificación visual transversal aplicada en `HomeScreen`, `AppDetailScreen` y `HistoryScreen`.
 
-### Corregido
+- 🎨 **Consistencia Visual con Material Icons (Sin dependencia de emojis en texto)**:
+  - Reemplazo transversal de emojis embebidos en cadenas de texto por componentes nativos `Icon` de la biblioteca extendida de Material Icons (`androidx.compose.material.icons`).
+  - Badges de estado en `WellnessSummaryCard` y `DailyDebriefBottomSheet` utilizan íconos vectoriales dinámicos (`CheckCircle`, `Balance`, `WarningAmber`, `ErrorOutline`).
+  - Chips de score utilizan `Icons.Outlined.Speed` con estilo neón a juego.
+  - Diálogo de Acerca de en Ajustes estilizado con `TrackChanges`, `Shield` y `Person` vectoriales.
 - 🧭 **Navegación de Ajustes desde Home**:
   - El botón de configuración en la barra superior de Home ahora sincroniza de manera limpia con la barra de navegación inferior (`popUpTo` al destino inicial con `launchSingleTop = true`), evitando pantallas duplicadas o estados rotos en la pila de navegación.
 - 🛡️ **Protección contra divisiones por cero**:
