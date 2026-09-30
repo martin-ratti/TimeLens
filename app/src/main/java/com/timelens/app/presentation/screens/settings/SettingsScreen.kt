@@ -49,22 +49,34 @@ fun SettingsScreen(
     var showGoalDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
 
+    var hasPermission by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            } else {
+                true
+            }
+        )
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        viewModel.toggleNotifications(isGranted)
+        hasPermission = isGranted
         if (isGranted) {
-            Toast.makeText(context, "Notificaciones activadas", Toast.LENGTH_SHORT).show()
+            viewModel.toggleNotifications(true)
+            val sent = viewModel.sendTestNotification()
+            if (sent) {
+                Toast.makeText(context, "¡Permiso concedido! Alerta enviada", Toast.LENGTH_SHORT).show()
+            }
         } else {
-            Toast.makeText(context, "Permiso de notificaciones denegado", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Se necesita permiso para mostrar notificaciones", Toast.LENGTH_LONG).show()
         }
     }
 
     val onToggleNotifications: (Boolean) -> Unit = { enable ->
         if (enable) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-            ) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasPermission) {
                 permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
                 viewModel.toggleNotifications(true)
@@ -174,11 +186,52 @@ fun SettingsScreen(
                             )
                         }
 
-                        Text(
-                            text = "Presioná para recibir una alerta inmediata o simular el resumen nocturno de las 22:00 hs.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        if (!hasPermission) {
+                            Surface(
+                                color = NeonRed.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, NeonRed.copy(alpha = 0.35f))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.NotificationsOff,
+                                        contentDescription = null,
+                                        tint = NeonRed,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "Permiso de Android requerido. Tocá 'Conceder permiso' para activar las alertas.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = NeonRed,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Button(
+                                        onClick = {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = NeonRed),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text("Permitir", color = Color.White, fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                        } else {
+                            Text(
+                                text = "Presioná para recibir una alerta inmediata o simular el resumen nocturno de las 22:00 hs.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -186,8 +239,16 @@ fun SettingsScreen(
                         ) {
                             OutlinedButton(
                                 onClick = {
-                                    viewModel.sendTestNotification()
-                                    Toast.makeText(context, "Notificación de alerta enviada", Toast.LENGTH_SHORT).show()
+                                    if (!hasPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        val sent = viewModel.sendTestNotification()
+                                        if (sent) {
+                                            Toast.makeText(context, "¡Notificación de alerta enviada!", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "No se pudo mostrar. Verificá los permisos del sistema.", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
                                 },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
@@ -199,8 +260,12 @@ fun SettingsScreen(
 
                             OutlinedButton(
                                 onClick = {
-                                    viewModel.triggerDailySummaryTest()
-                                    Toast.makeText(context, "Generando resumen diario...", Toast.LENGTH_SHORT).show()
+                                    if (!hasPermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        viewModel.triggerDailySummaryTest()
+                                        Toast.makeText(context, "Generando resumen diario...", Toast.LENGTH_SHORT).show()
+                                    }
                                 },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),

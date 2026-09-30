@@ -41,8 +41,8 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun sendTestNotification() {
-        notificationManager.showTestNotification()
+    fun sendTestNotification(): Boolean {
+        return notificationManager.showTestNotification()
     }
 
     fun triggerDailySummaryTest() {

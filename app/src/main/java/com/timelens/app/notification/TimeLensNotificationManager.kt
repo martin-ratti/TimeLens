@@ -100,8 +100,12 @@ class TimeLensNotificationManager @Inject constructor(
         return PendingIntent.getActivity(context, 0, intent, flags)
     }
 
-    fun showGoalExceededNotification(usedMillis: Long, goalHours: Int) {
-        if (!hasNotificationPermission()) return
+    fun showGoalExceededNotification(usedMillis: Long, goalHours: Int): Boolean {
+        createNotificationChannels()
+        if (!hasNotificationPermission()) {
+            android.util.Log.w("TimeLensNotify", "Permiso no concedido para showGoalExceededNotification")
+            return false
+        }
 
         val formattedTime = TimeFormatter.formatMillisToShort(usedMillis)
         val content = "Alcanzaste $formattedTime de pantalla hoy ($goalHours h de límite). ¡Un momento ideal para desconectar y descansar la vista!"
@@ -117,10 +121,15 @@ class TimeLensNotificationManager @Inject constructor(
             .build()
 
         notificationManager.notify(NOTIFICATION_ID_GOAL, notification)
+        return true
     }
 
-    fun showLongSessionNotification(appName: String, sessionMinutes: Long) {
-        if (!hasNotificationPermission()) return
+    fun showLongSessionNotification(appName: String, sessionMinutes: Long): Boolean {
+        createNotificationChannels()
+        if (!hasNotificationPermission()) {
+            android.util.Log.w("TimeLensNotify", "Permiso no concedido para showLongSessionNotification")
+            return false
+        }
 
         val content = "Llevás $sessionMinutes min continuos en $appName. ¡Recordá estirar el cuerpo y descansar la vista!"
 
@@ -135,10 +144,15 @@ class TimeLensNotificationManager @Inject constructor(
             .build()
 
         notificationManager.notify(NOTIFICATION_ID_LONG_SESSION, notification)
+        return true
     }
 
-    fun showRecordSessionNotification(appName: String, durationFormatted: String) {
-        if (!hasNotificationPermission()) return
+    fun showRecordSessionNotification(appName: String, durationFormatted: String): Boolean {
+        createNotificationChannels()
+        if (!hasNotificationPermission()) {
+            android.util.Log.w("TimeLensNotify", "Permiso no concedido para showRecordSessionNotification")
+            return false
+        }
 
         val content = "Registraste una sesión de $durationFormatted en $appName, tu sesión más larga de los últimos días."
 
@@ -153,10 +167,15 @@ class TimeLensNotificationManager @Inject constructor(
             .build()
 
         notificationManager.notify(NOTIFICATION_ID_RECORD, notification)
+        return true
     }
 
-    fun showDailySummaryNotification(summary: DaySummary, comparisonText: String) {
-        if (!hasNotificationPermission()) return
+    fun showDailySummaryNotification(summary: DaySummary, comparisonText: String): Boolean {
+        createNotificationChannels()
+        if (!hasNotificationPermission()) {
+            android.util.Log.w("TimeLensNotify", "Permiso no concedido para showDailySummaryNotification")
+            return false
+        }
 
         val formattedTotal = TimeFormatter.formatMillisToShort(summary.totalScreenTimeMs)
         val topApp = summary.topApps.firstOrNull()?.appName ?: "Sin uso"
@@ -179,10 +198,15 @@ class TimeLensNotificationManager @Inject constructor(
             .build()
 
         notificationManager.notify(NOTIFICATION_ID_SUMMARY, notification)
+        return true
     }
 
-    fun showTestNotification() {
-        if (!hasNotificationPermission()) return
+    fun showTestNotification(): Boolean {
+        createNotificationChannels()
+        if (!hasNotificationPermission()) {
+            android.util.Log.w("TimeLensNotify", "Permiso no concedido para showTestNotification")
+            return false
+        }
 
         val content = "¡Excelente! Las notificaciones y alertas de bienestar digital de TimeLens están configuradas y funcionando al 100%."
 
@@ -197,6 +221,7 @@ class TimeLensNotificationManager @Inject constructor(
             .build()
 
         notificationManager.notify(NOTIFICATION_ID_TEST, notification)
+        return true
     }
 
     fun buildForegroundNotification(): Notification {
