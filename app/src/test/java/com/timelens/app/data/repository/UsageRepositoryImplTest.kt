@@ -121,4 +121,53 @@ class UsageRepositoryImplTest {
         val sessions = repository.getSessions("com.app.one", LocalDate.now())
         assertTrue(sessions.isEmpty())
     }
+
+    @Test
+    fun `getWeeklyTrend returns only real existing days and does not invent fake days`() = runTest {
+        // Given that db has only today, and android has no historical events
+        val today = LocalDate.now()
+        val todayEntity = DailyUsageEntity(
+            date = today.toString(),
+            totalScreenTimeMs = 3600000L,
+            totalUnlocks = 25,
+            longestSessionMs = 1200000L,
+            longestSessionApp = "com.app.one",
+            topAppPackage = "com.app.one",
+            topAppTimeMs = 3600000L,
+            totalSessions = 4,
+            peakHour = 15
+        )
+
+        coEvery { dailyUsageDao.getByDate(today.toString()) } returns todayEntity
+        // For past days, db returns null
+        coEvery { dailyUsageDao.getByDate(neq(today.toString())) } returns null
+        // Android has NO past events
+        every { dataSource.getEventsForRange(any(), any()) } returns emptyList()
+        // db getLastDays returns only today
+        coEvery { dailyUsageDao.getLastDays(7) } returns listOf(todayEntity)
+        coEvery { appDailyUsageDao.getByDate(today.toString()) } returns emptyList()
+
+        val trend = repository.getWeeklyTrend()
+
+        assertEquals(1, trend.size)
+        assertEquals(today, trend[0].date)
+        assertEquals(25, trend[0].totalUnlocks)
+        assertEquals(3600000L, trend[0].totalScreenTimeMs)
+        // Verify no fake inserts occurred for past days
+        coVerify(exactly = 0) { dailyUsageDao.insertOrUpdate(match { it.date != today.toString() }) }
+    }
+
+    @Test
+    fun `getWeeklyTrend purges artificial records and old records automatically`() = runTest {
+        every { dataSource.getEventsForRange(any(), any()) } returns emptyList()
+        coEvery { dailyUsageDao.getLastDays(7) } returns emptyList()
+
+        repository.getWeeklyTrend()
+
+        // Verify that the artificial and orphaned records were purged
+        coVerify { dailyUsageDao.deleteArtificialRecords() }
+        coVerify { appDailyUsageDao.deleteOrphanedRecords() }
+        coVerify { dailyUsageDao.deleteOlderThan(any()) }
+        coVerify { appDailyUsageDao.deleteOlderThan(any()) }
+    }
 }

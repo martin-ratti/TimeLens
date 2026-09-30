@@ -27,4 +27,10 @@ interface AppDailyUsageDao {
 
     @Query("DELETE FROM app_daily_usage WHERE date < :beforeDate")
     suspend fun deleteOlderThan(beforeDate: String)
+
+    @Query("DELETE FROM app_daily_usage WHERE date = :date")
+    suspend fun deleteByDate(date: String)
+
+    @Query("DELETE FROM app_daily_usage WHERE date NOT IN (SELECT date FROM daily_usage)")
+    suspend fun deleteOrphanedRecords()
 }

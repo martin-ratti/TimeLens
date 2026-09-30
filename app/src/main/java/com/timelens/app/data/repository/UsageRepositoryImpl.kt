@@ -137,20 +137,28 @@ class UsageRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getWeeklyTrend(): List<DaySummary> = withContext(Dispatchers.IO) {
-        var entities = dailyUsageDao.getLastDays(7)
-        if (entities.size < 7) {
-            backfillHistoricalDays()
-            entities = dailyUsageDao.getLastDays(7)
-        }
+        syncRealHistoricalDays()
+        val entities = dailyUsageDao.getLastDays(7)
         entities.mapNotNull { getDaySummary(LocalDate.parse(it.date)) }.sortedBy { it.date }
     }
 
-    private suspend fun backfillHistoricalDays() {
+    private suspend fun syncRealHistoricalDays() {
+        val today = LocalDate.now()
+        // Purgar inmediatamente cualquier residuo artificial y registros desactualizados
+        dailyUsageDao.deleteArtificialRecords()
+        appDailyUsageDao.deleteOrphanedRecords()
+        val cutoffDate = today.minusDays(7).toString()
+        dailyUsageDao.deleteOlderThan(cutoffDate)
+        appDailyUsageDao.deleteOlderThan(cutoffDate)
+
         for (i in 1..6) {
-            val date = LocalDate.now().minusDays(i.toLong())
+            val date = today.minusDays(i.toLong())
             val dateString = date.toString()
 
-            if (dailyUsageDao.getByDate(dateString) != null) continue
+            val existing = dailyUsageDao.getByDate(dateString)
+            if (existing != null) {
+                continue
+            }
 
             val targetCal = java.util.Calendar.getInstance().apply {
                 add(java.util.Calendar.DAY_OF_YEAR, -i)
@@ -162,38 +170,54 @@ class UsageRepositoryImpl @Inject constructor(
             val startMs = targetCal.timeInMillis
             val endMs = startMs + (24 * 60 * 60 * 1000L) - 1
 
-            val stats = dataSource.getUsageStatsForRange(startMs, endMs)
-            val filteredStats = stats.filter { dataSource.isAppEligibleForStats(it.packageName) }
-            val totalScreenTimeMs = filteredStats.sumOf { it.totalTimeInForeground }
+            val events = dataSource.getEventsForRange(startMs, endMs)
 
-            if (totalScreenTimeMs > 0) {
-                val topApps = filteredStats
-                    .sortedByDescending { it.totalTimeInForeground }
-                    .take(5)
-                    .map { stat ->
-                        AppUsageInfo(
-                            packageName = stat.packageName,
-                            appName = dataSource.getAppName(stat.packageName),
-                            icon = null,
-                            totalTimeMs = stat.totalTimeInForeground,
-                            sessionCount = (stat.totalTimeInForeground / (15 * 60 * 1000L)).toInt().coerceAtLeast(1),
-                            longestSessionMs = stat.totalTimeInForeground / 2,
-                            category = dataSource.getAppCategory(stat.packageName)
-                        )
-                    }
-
-                val summary = DaySummary(
-                    date = date,
-                    totalScreenTimeMs = totalScreenTimeMs,
-                    totalUnlocks = (50 + (i * 7) % 35),
-                    topApps = topApps,
-                    longestSession = topApps.firstOrNull()?.let {
-                        Session(it.packageName, it.appName, it.totalTimeMs / 2, 0L, 0L)
-                    },
-                    peakHour = (14 + i) % 24,
-                    totalSessions = topApps.sumOf { it.sessionCount }
+            if (events.isNotEmpty()) {
+                val metrics = SessionCalculator.calculateMetrics(
+                    eventsList = events,
+                    startTimeMs = startMs,
+                    isEligibleApp = { dataSource.isAppEligibleForStats(it) }
                 )
-                saveDaySummary(summary)
+
+                val apps = metrics.appUsageMap.map { (packageName, totalTimeMs) ->
+                    AppUsageInfo(
+                        packageName = packageName,
+                        appName = dataSource.getAppName(packageName),
+                        icon = null,
+                        totalTimeMs = totalTimeMs,
+                        sessionCount = metrics.appSessionCountMap[packageName] ?: 0,
+                        longestSessionMs = if (metrics.longestSessionAppPackage == packageName) metrics.longestSessionMs else 0L,
+                        category = dataSource.getAppCategory(packageName)
+                    )
+                }.filter { it.totalTimeMs > 0 }
+                 .sortedByDescending { it.totalTimeMs }
+
+                val totalTime = apps.sumOf { it.totalTimeMs }
+
+                if (totalTime > 0) {
+                    val longestSessionAppInfo = apps.find { it.packageName == metrics.longestSessionAppPackage }
+                    val longestSession = if (metrics.longestSessionAppPackage != null && metrics.longestSessionMs > 0) {
+                        Session(
+                            packageName = metrics.longestSessionAppPackage,
+                            appName = longestSessionAppInfo?.appName ?: dataSource.getAppName(metrics.longestSessionAppPackage),
+                            durationMs = metrics.longestSessionMs,
+                            startTimeMs = 0L,
+                            endTimeMs = metrics.longestSessionMs
+                        )
+                    } else null
+
+                    val summary = DaySummary(
+                        date = date,
+                        totalScreenTimeMs = totalTime,
+                        totalUnlocks = metrics.totalUnlocks,
+                        topApps = apps.take(25),
+                        longestSession = longestSession,
+                        peakHour = metrics.peakHour,
+                        productiveHour = metrics.productiveHour,
+                        totalSessions = metrics.totalSessions
+                    )
+                    saveDaySummary(summary)
+                }
             }
         }
     }
@@ -219,10 +243,16 @@ class UsageRepositoryImpl @Inject constructor(
 
         val hourlyUsage = SessionCalculator.calculateAppHourlyUsage(events, packageName)
 
+        val todayDateStr = LocalDate.now().toString()
         val dbHistory = appDailyUsageDao.getAppHistory(packageName, 7)
-        val weeklyHistory = dbHistory.map {
-            it.date to it.totalTimeMs
-        }.reversed()
+            .filter { it.date != todayDateStr }
+        
+        val historyList = mutableListOf<Pair<String, Long>>()
+        historyList.addAll(dbHistory.map { it.date to it.totalTimeMs })
+        if (totalTimeMs > 0L) {
+            historyList.add(todayDateStr to totalTimeMs)
+        }
+        val weeklyHistory = historyList.sortedBy { it.first }
 
         val totalDailyScreenTimeMs = metrics.appUsageMap.values.sum()
         val peakHour = hourlyUsage.maxByOrNull { it.value }?.key ?: 0

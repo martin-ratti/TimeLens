@@ -81,6 +81,17 @@ class UsageDataSource @Inject constructor(
         return eventList
     }
 
+    fun getEventsForRange(startTime: Long, endTime: Long): List<UsageEvents.Event> {
+        val events = usageStatsManager.queryEvents(startTime, endTime)
+        val eventList = mutableListOf<UsageEvents.Event>()
+        while (events.hasNextEvent()) {
+            val event = UsageEvents.Event()
+            events.getNextEvent(event)
+            eventList.add(event)
+        }
+        return eventList
+    }
+
     fun getUsageStatsForRange(startTime: Long, endTime: Long): List<UsageStats> {
         return usageStatsManager.queryUsageStats(
             UsageStatsManager.INTERVAL_DAILY,

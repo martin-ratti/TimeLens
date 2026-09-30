@@ -27,4 +27,10 @@ interface DailyUsageDao {
 
     @Query("DELETE FROM daily_usage WHERE date < :beforeDate")
     suspend fun deleteOlderThan(beforeDate: String)
+
+    @Query("DELETE FROM daily_usage WHERE date = :date")
+    suspend fun deleteByDate(date: String)
+
+    @Query("DELETE FROM daily_usage WHERE longestSessionMs = 0 AND totalScreenTimeMs > 0")
+    suspend fun deleteArtificialRecords()
 }

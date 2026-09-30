@@ -149,7 +149,7 @@ fun HistoryContent(weeklyData: List<DaySummary>) {
                     icon = Icons.Outlined.DateRange,
                     title = "Total sem.",
                     value = TimeFormatter.formatMillisToShort(totalWeeklyMs),
-                    subtitle = "${weeklyData.size} días",
+                    subtitle = if (weeklyData.size == 1) "1 día registrado" else "${weeklyData.size} días reg.",
                     accentColor = NeonPurple,
                     modifier = Modifier.weight(1f)
                 )
@@ -181,7 +181,7 @@ fun HistoryContent(weeklyData: List<DaySummary>) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Actividad (Últimos ${weeklyData.size} días)",
+                        text = if (weeklyData.size == 1) "Actividad (1 día registrado)" else "Actividad (Últimos ${weeklyData.size} días)",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -195,28 +195,30 @@ fun HistoryContent(weeklyData: List<DaySummary>) {
             }
         }
 
-        // Best / Worst Day Highlights
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                StatCard(
-                    icon = Icons.Outlined.EmojiEvents,
-                    title = "Menor uso",
-                    value = bestDay?.let { TimeFormatter.formatMillisToShort(it.totalScreenTimeMs) } ?: "0m",
-                    subtitle = bestDay?.date?.format(dayFormatter)?.replaceFirstChar { it.uppercase() } ?: "-",
-                    accentColor = NeonGreen,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    icon = Icons.Outlined.Warning,
-                    title = "Mayor uso",
-                    value = worstDay?.let { TimeFormatter.formatMillisToShort(it.totalScreenTimeMs) } ?: "0m",
-                    subtitle = worstDay?.date?.format(dayFormatter)?.replaceFirstChar { it.uppercase() } ?: "-",
-                    accentColor = NeonOrange,
-                    modifier = Modifier.weight(1f)
-                )
+        // Best / Worst Day Highlights (shown when 2 or more days are recorded)
+        if (weeklyData.size > 1) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    StatCard(
+                        icon = Icons.Outlined.EmojiEvents,
+                        title = "Menor uso",
+                        value = bestDay?.let { TimeFormatter.formatMillisToShort(it.totalScreenTimeMs) } ?: "0m",
+                        subtitle = bestDay?.date?.format(dayFormatter)?.replaceFirstChar { it.uppercase() } ?: "-",
+                        accentColor = NeonGreen,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        icon = Icons.Outlined.Warning,
+                        title = "Mayor uso",
+                        value = worstDay?.let { TimeFormatter.formatMillisToShort(it.totalScreenTimeMs) } ?: "0m",
+                        subtitle = worstDay?.date?.format(dayFormatter)?.replaceFirstChar { it.uppercase() } ?: "-",
+                        accentColor = NeonOrange,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 
