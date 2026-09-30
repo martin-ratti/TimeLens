@@ -70,7 +70,7 @@ class HomeViewModel @Inject constructor(
                 val comparisonText = if (yesterday != null && yesterday.totalScreenTimeMs > 0) {
                     TimeFormatter.formatPercentageChange(summary.totalScreenTimeMs, yesterday.totalScreenTimeMs)
                 } else {
-                    "🎯 Meta diaria: ${goal}h"
+                    "Meta diaria: ${goal}h"
                 }
 
                 val wellnessReport = getWellnessReportUseCase(summary, yesterday, goal)

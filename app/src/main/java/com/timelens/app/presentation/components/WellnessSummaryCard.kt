@@ -52,6 +52,13 @@ fun WellnessSummaryCard(
         InsightCategory.APP_BALANCE -> Icons.Outlined.Apps
     }
 
+    val statusIcon = when {
+        report.overallScore >= 80 -> Icons.Outlined.CheckCircle
+        report.overallScore >= 60 -> Icons.Outlined.Balance
+        report.overallScore >= 40 -> Icons.Outlined.WarningAmber
+        else -> Icons.Outlined.ErrorOutline
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -80,6 +87,12 @@ fun WellnessSummaryCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        Icon(
+                            imageVector = statusIcon,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Text(
                             text = report.overallStatus,
                             style = MaterialTheme.typography.labelMedium,
@@ -228,13 +241,24 @@ fun WellnessSummaryCard(
                         color = accentColor.copy(alpha = 0.12f),
                         border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f))
                     ) {
-                        Text(
-                            text = "Score: ${report.overallScore}/100",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = accentColor,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Speed,
+                                contentDescription = null,
+                                tint = accentColor,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "Score: ${report.overallScore}/100",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = accentColor,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
 
                     TextButton(

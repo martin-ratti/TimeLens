@@ -177,10 +177,10 @@ class GetWellnessReportUseCase @Inject constructor() {
         score = score.coerceIn(15, 100)
 
         val overallStatus = when {
-            score >= 80 -> "🌿 Hábitos Saludables"
-            score >= 60 -> "⚖️ Uso Equilibrado"
-            score >= 40 -> "⚠️ Atención al Hábito"
-            else -> "🎯 Límite Excedido"
+            score >= 80 -> "Hábitos Saludables"
+            score >= 60 -> "Uso Equilibrado"
+            score >= 40 -> "Atención al Hábito"
+            else -> "Límite Excedido"
         }
 
         return WellnessReport(

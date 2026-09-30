@@ -45,6 +45,13 @@ fun DailyDebriefBottomSheet(
         else -> NeonRed
     }
 
+    val statusIcon = when {
+        report.overallScore >= 80 -> Icons.Outlined.CheckCircle
+        report.overallScore >= 60 -> Icons.Outlined.Balance
+        report.overallScore >= 40 -> Icons.Outlined.WarningAmber
+        else -> Icons.Outlined.ErrorOutline
+    }
+
     val dateFormatted = remember {
         java.time.LocalDate.now().format(
             DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", Locale("es", "ES"))
@@ -163,13 +170,24 @@ fun DailyDebriefBottomSheet(
                             color = scoreColor.copy(alpha = 0.12f),
                             border = BorderStroke(1.dp, scoreColor.copy(alpha = 0.25f))
                         ) {
-                            Text(
-                                text = report.overallStatus,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = scoreColor
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Icon(
+                                    imageVector = statusIcon,
+                                    contentDescription = null,
+                                    tint = scoreColor,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = report.overallStatus,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = scoreColor
+                                )
+                            }
                         }
                         Text(
                             text = when {
