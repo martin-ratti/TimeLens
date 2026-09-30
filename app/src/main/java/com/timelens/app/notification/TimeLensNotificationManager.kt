@@ -204,7 +204,7 @@ class TimeLensNotificationManager @Inject constructor(
                 append("\n\n💡 Diagnóstico & Consejo:\n")
                 append("${insight.title}: ${insight.actionTip}")
             }
-            append("\n\n👉 Tocá para abrir tu análisis completo en TimeLens.")
+            append("\n\n👉 Tocá para abrir tu cierre del día en TimeLens.")
         }
 
         val summaryPendingIntent = getMainActivityPendingIntent("daily_summary")
@@ -220,7 +220,7 @@ class TimeLensNotificationManager @Inject constructor(
             .setContentIntent(summaryPendingIntent)
             .addAction(
                 R.drawable.ic_notification,
-                "Ver Análisis Completo",
+                "Ver Cierre del Día",
                 summaryPendingIntent
             )
             .build()

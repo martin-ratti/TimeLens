@@ -21,12 +21,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.content.Intent
 import com.timelens.app.domain.model.AppCategory
 import com.timelens.app.domain.model.DaySummary
 import com.timelens.app.domain.model.WellnessReport
 import com.timelens.app.presentation.components.*
 import com.timelens.app.presentation.theme.*
 import com.timelens.app.util.TimeFormatter
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,10 +36,41 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     onAppClick: (String) -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
-    onNavigateToSummary: () -> Unit = {},
+    openDebriefDirectly: Boolean = false,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    var showDebriefSheet by rememberSaveable { mutableStateOf(openDebriefDirectly) }
+
+    LaunchedEffect(openDebriefDirectly) {
+        if (openDebriefDirectly) {
+            showDebriefSheet = true
+        }
+    }
+
+    val onShareReport: () -> Unit = {
+        val state = uiState as? HomeUiState.Success
+        if (state?.wellnessReport != null) {
+            val dateFormatted = java.time.LocalDate.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", java.util.Locale("es", "ES"))
+            ).replaceFirstChar { it.uppercase() }
+            val shareText = buildString {
+                append("📊 Cierre de Bienestar TimeLens — $dateFormatted\n\n")
+                append("⏱️ Tiempo de pantalla: ${TimeFormatter.formatMillisToShort(state.summary.totalScreenTimeMs)} (${state.comparisonText})\n")
+                append("🌱 Score de Bienestar: ${state.wellnessReport.overallScore}/100 (${state.wellnessReport.overallStatus})\n")
+                append("🔓 Desbloqueos: ${state.summary.totalUnlocks} veces\n")
+                append("💡 Consejo de hoy: ${state.wellnessReport.primaryInsight.title}: ${state.wellnessReport.primaryInsight.actionTip}\n\n")
+                append("Seguimiento consciente con #TimeLens")
+            }
+            val sendIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_TEXT, shareText)
+                type = "text/plain"
+            }
+            context.startActivity(Intent.createChooser(sendIntent, "Compartir cierre del día"))
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -59,11 +92,11 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToSummary) {
+                    IconButton(onClick = { showDebriefSheet = true }) {
                         Icon(
-                            imageVector = Icons.Outlined.Analytics,
-                            contentDescription = "Resumen Diario",
-                            tint = NeonCyan
+                            imageVector = Icons.Outlined.Bedtime,
+                            contentDescription = "Cierre del Día",
+                            tint = NeonPurple
                         )
                     }
                     IconButton(onClick = onNavigateToSettings) {
@@ -128,9 +161,23 @@ fun HomeScreen(
                         dailyGoalHours = state.dailyGoalHours,
                         wellnessReport = state.wellnessReport,
                         onAppClick = onAppClick,
-                        onNavigateToSummary = onNavigateToSummary
+                        onNavigateToSummary = { showDebriefSheet = true }
                     )
                 }
+            }
+        }
+
+        if (showDebriefSheet && uiState is HomeUiState.Success) {
+            val success = uiState as HomeUiState.Success
+            if (success.wellnessReport != null) {
+                DailyDebriefBottomSheet(
+                    report = success.wellnessReport,
+                    summary = success.summary,
+                    comparisonText = success.comparisonText,
+                    dailyGoalHours = success.dailyGoalHours,
+                    onDismiss = { showDebriefSheet = false },
+                    onShare = onShareReport
+                )
             }
         }
     }

@@ -223,19 +223,26 @@ fun WellnessSummaryCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Score de hoy: ${report.overallScore}/100",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = accentColor,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = accentColor.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f))
+                    ) {
+                        Text(
+                            text = "Score: ${report.overallScore}/100",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = accentColor,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
 
                     TextButton(
                         onClick = onViewFullSummary,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "Ver análisis completo",
+                            text = "Ver cierre del día",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = accentColor

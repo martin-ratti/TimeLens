@@ -21,8 +21,10 @@ import com.timelens.app.presentation.screens.history.HistoryScreen
 import com.timelens.app.presentation.screens.home.HomeScreen
 import com.timelens.app.presentation.screens.onboarding.OnboardingScreen
 import com.timelens.app.presentation.screens.settings.SettingsScreen
-import com.timelens.app.presentation.screens.summary.DailySummaryScreen
 import com.timelens.app.presentation.theme.NeonBlue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 @Composable
 fun AppNavHost(
@@ -31,11 +33,22 @@ fun AppNavHost(
     navigateToRoute: String? = null
 ) {
     val navController = rememberNavController()
+    var openDebriefOnHome by remember { mutableStateOf(false) }
 
     LaunchedEffect(navigateToRoute) {
         if (!navigateToRoute.isNullOrBlank()) {
-            navController.navigate(navigateToRoute) {
-                launchSingleTop = true
+            if (navigateToRoute == "daily_summary" || navigateToRoute == "daily_debrief") {
+                openDebriefOnHome = true
+                navController.navigate(NavRoutes.Home.route) {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                }
+            } else {
+                navController.navigate(navigateToRoute) {
+                    launchSingleTop = true
+                }
             }
         }
     }
@@ -125,9 +138,7 @@ fun AppNavHost(
                             restoreState = true
                         }
                     },
-                    onNavigateToSummary = {
-                        navController.navigate(NavRoutes.DailySummary.route)
-                    }
+                    openDebriefDirectly = openDebriefOnHome
                 )
             }
             composable(
@@ -146,15 +157,13 @@ fun AppNavHost(
             composable(NavRoutes.Settings.route) {
                 SettingsScreen(
                     onNavigateToSummary = {
-                        navController.navigate(NavRoutes.DailySummary.route)
-                    }
-                )
-            }
-            composable(NavRoutes.DailySummary.route) {
-                DailySummaryScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onAppClick = { packageName ->
-                        navController.navigate(NavRoutes.AppDetail.createRoute(packageName))
+                        openDebriefOnHome = true
+                        navController.navigate(NavRoutes.Home.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

@@ -14,7 +14,6 @@ sealed class NavRoutes(val route: String) {
     data object History : NavRoutes("history")
     data object Settings : NavRoutes("settings")
     data object Onboarding : NavRoutes("onboarding")
-    data object DailySummary : NavRoutes("daily_summary")
 }
 
 enum class BottomNavItem(

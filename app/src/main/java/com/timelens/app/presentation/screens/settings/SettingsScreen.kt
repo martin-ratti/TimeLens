@@ -286,15 +286,15 @@ fun SettingsScreen(
                                 contentPadding = PaddingValues(vertical = 4.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Outlined.Analytics,
+                                    imageVector = Icons.Outlined.Bedtime,
                                     contentDescription = null,
-                                    tint = NeonCyan,
+                                    tint = NeonPurple,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Abrir pantalla de resumen de hoy",
-                                    color = NeonCyan,
+                                    "Ver cierre del día de hoy",
+                                    color = NeonPurple,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
