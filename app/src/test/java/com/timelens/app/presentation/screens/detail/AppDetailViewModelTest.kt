@@ -82,4 +82,21 @@ class AppDetailViewModelTest {
         assertNull(viewModel.appLimitMinutes.value)
         assertNull(prefsManager.getAppLimit("com.instagram.android"))
     }
+
+    @Test
+    fun `missing or empty packageName safely sets Error state without crash`() = runTest {
+        val savedStateHandle = SavedStateHandle() // No packageName passed
+
+        val viewModel = AppDetailViewModel(
+            savedStateHandle = savedStateHandle,
+            repository = fakeRepository,
+            prefsManager = prefsManager
+        )
+
+        assertEquals("", viewModel.packageName)
+        val state = viewModel.uiState.value
+        assertTrue(state is AppDetailUiState.Error)
+        val error = state as AppDetailUiState.Error
+        assertEquals("No se especificó la aplicación", error.message)
+    }
 }

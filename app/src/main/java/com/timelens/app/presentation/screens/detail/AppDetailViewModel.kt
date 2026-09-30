@@ -29,7 +29,7 @@ class AppDetailViewModel @Inject constructor(
     private val prefsManager: UserPreferencesManager
 ) : ViewModel() {
 
-    val packageName: String = checkNotNull(savedStateHandle["packageName"])
+    val packageName: String = savedStateHandle.get<String>("packageName").orEmpty()
 
     private val _uiState = MutableStateFlow<AppDetailUiState>(AppDetailUiState.Loading)
     val uiState: StateFlow<AppDetailUiState> = _uiState.asStateFlow()
@@ -39,7 +39,7 @@ class AppDetailViewModel @Inject constructor(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
-        initialValue = prefsManager.getAppLimit(packageName)
+        initialValue = if (packageName.isNotEmpty()) prefsManager.getAppLimit(packageName) else null
     )
 
     init {
@@ -47,6 +47,10 @@ class AppDetailViewModel @Inject constructor(
     }
 
     fun loadAppDetail() {
+        if (packageName.isBlank()) {
+            _uiState.value = AppDetailUiState.Error("No se especificó la aplicación")
+            return
+        }
         viewModelScope.launch {
             _uiState.value = AppDetailUiState.Loading
             try {

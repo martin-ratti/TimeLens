@@ -36,8 +36,11 @@ class UserPreferencesManager(
     private val _darkThemeEnabled = MutableStateFlow(_themeMode.value != com.timelens.app.domain.model.ThemeMode.LIGHT)
     val darkThemeEnabled: StateFlow<Boolean> = _darkThemeEnabled.asStateFlow()
 
-    private val _dynamicColorEnabled = MutableStateFlow(prefs.getBoolean("dynamic_color_enabled", false))
-    val dynamicColorEnabled: StateFlow<Boolean> = _dynamicColorEnabled.asStateFlow()
+    init {
+        if (prefs.contains("dynamic_color_enabled")) {
+            prefs.edit().remove("dynamic_color_enabled").apply()
+        }
+    }
 
     private fun loadAppLimits(): Map<String, Int> {
         val rawSet = prefs.getStringSet("app_limits_set", emptySet()) ?: emptySet()
@@ -90,11 +93,6 @@ class UserPreferencesManager(
         val isDark = mode != com.timelens.app.domain.model.ThemeMode.LIGHT
         prefs.edit().putBoolean("dark_theme_enabled", isDark).apply()
         _darkThemeEnabled.value = isDark
-    }
-
-    fun setDynamicColorEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean("dynamic_color_enabled", enabled).apply()
-        _dynamicColorEnabled.value = enabled
     }
 
     fun setDarkThemeEnabled(enabled: Boolean) {

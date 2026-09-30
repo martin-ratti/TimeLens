@@ -1,16 +1,12 @@
 package com.timelens.app.presentation.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-
 import androidx.compose.ui.graphics.Color
+import com.timelens.app.domain.model.ThemeMode
 
 private val DarkColorScheme = darkColorScheme(
     primary = NeonBlue,
@@ -44,24 +40,16 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun TimeLensTheme(
-    themeMode: com.timelens.app.domain.model.ThemeMode = com.timelens.app.domain.model.ThemeMode.SYSTEM,
-    dynamicColor: Boolean = false,
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (themeMode) {
-        com.timelens.app.domain.model.ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        com.timelens.app.domain.model.ThemeMode.DARK -> true
-        com.timelens.app.domain.model.ThemeMode.LIGHT -> false
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.DARK -> true
+        ThemeMode.LIGHT -> false
     }
 
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
@@ -73,9 +61,8 @@ fun TimeLensTheme(
 @Composable
 fun TimeLensTheme(
     darkTheme: Boolean,
-    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val mode = if (darkTheme) com.timelens.app.domain.model.ThemeMode.DARK else com.timelens.app.domain.model.ThemeMode.LIGHT
-    TimeLensTheme(themeMode = mode, dynamicColor = dynamicColor, content = content)
+    val mode = if (darkTheme) ThemeMode.DARK else ThemeMode.LIGHT
+    TimeLensTheme(themeMode = mode, content = content)
 }

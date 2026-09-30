@@ -1,6 +1,7 @@
 package com.timelens.app.presentation.screens.detail
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,13 +16,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import com.timelens.app.domain.model.AppDetailInfo
 import com.timelens.app.presentation.components.HourlyBarChart
 import com.timelens.app.presentation.components.StatCard
@@ -134,19 +135,30 @@ fun AppDetailContent(
                         color = NeonBlue.copy(alpha = 0.15f)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            if (detail.icon != null) {
-                                AsyncImage(
-                                    model = detail.icon,
-                                    contentDescription = detail.appName,
-                                    modifier = Modifier.size(36.dp)
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Outlined.Apps,
-                                    contentDescription = null,
-                                    tint = NeonBlue,
-                                    modifier = Modifier.size(36.dp)
-                                )
+                            when (val icon = detail.icon) {
+                                is ImageBitmap -> {
+                                    Image(
+                                        bitmap = icon,
+                                        contentDescription = "Logo de ${detail.appName}",
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                                is ImageVector -> {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = "Logo de ${detail.appName}",
+                                        tint = NeonBlue,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                                else -> {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Apps,
+                                        contentDescription = null,
+                                        tint = NeonBlue,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -395,8 +407,8 @@ fun AppLimitCard(
                         Text(
                             text = when {
                                 !hasLimit -> "Sin límite configurado"
-                                isExceeded -> "⚠️ Superado por ${usedMinutes - (appLimitMinutes ?: 0)} min"
-                                isNearLimit -> "⏳ Al 80% de tu meta máxima"
+                                isExceeded -> "Superado por ${usedMinutes - (appLimitMinutes ?: 0)} min"
+                                isNearLimit -> "Al 80% de tu meta máxima"
                                 else -> "Meta activa para hoy"
                             },
                             style = MaterialTheme.typography.bodySmall,
@@ -416,7 +428,7 @@ fun AppLimitCard(
                 }
             }
 
-            if (hasLimit && appLimitMinutes != null && appLimitMinutes > 0) {
+            if (hasLimit && appLimitMinutes != null) {
                 val progress = (usedMinutes.toFloat() / appLimitMinutes).coerceIn(0f, 1f)
                 val percentage = (usedMinutes.toFloat() / appLimitMinutes * 100).toInt()
 

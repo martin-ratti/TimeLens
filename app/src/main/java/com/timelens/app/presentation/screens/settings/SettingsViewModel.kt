@@ -25,7 +25,6 @@ class SettingsViewModel @Inject constructor(
     val notificationsEnabled: StateFlow<Boolean> = prefsManager.notificationsEnabled
     val darkThemeEnabled: StateFlow<Boolean> = prefsManager.darkThemeEnabled
     val themeMode: StateFlow<com.timelens.app.domain.model.ThemeMode> = prefsManager.themeMode
-    val dynamicColorEnabled: StateFlow<Boolean> = prefsManager.dynamicColorEnabled
 
     fun setDailyGoal(hours: Int) {
         prefsManager.setDailyGoalHours(hours)
@@ -33,10 +32,6 @@ class SettingsViewModel @Inject constructor(
 
     fun setThemeMode(mode: com.timelens.app.domain.model.ThemeMode) {
         prefsManager.setThemeMode(mode)
-    }
-
-    fun toggleDynamicColor(enabled: Boolean) {
-        prefsManager.setDynamicColorEnabled(enabled)
     }
 
     fun toggleNotifications(enabled: Boolean) {

@@ -21,7 +21,6 @@ class UserPreferencesManagerTest {
         assertTrue(prefsManager.notificationsEnabled.value)
         assertTrue(prefsManager.darkThemeEnabled.value)
         assertEquals(ThemeMode.DARK, prefsManager.themeMode.value)
-        assertFalse(prefsManager.dynamicColorEnabled.value)
         assertTrue(prefsManager.appLimits.value.isEmpty())
     }
 
@@ -67,15 +66,6 @@ class UserPreferencesManagerTest {
         prefsManager.setThemeMode(ThemeMode.DARK)
         assertEquals(ThemeMode.DARK, prefsManager.themeMode.value)
         assertTrue(prefsManager.darkThemeEnabled.value)
-    }
-
-    @Test
-    fun `setDynamicColorEnabled updates state flow`() {
-        prefsManager.setDynamicColorEnabled(true)
-        assertTrue(prefsManager.dynamicColorEnabled.value)
-
-        prefsManager.setDynamicColorEnabled(false)
-        assertFalse(prefsManager.dynamicColorEnabled.value)
     }
 
     @Test
