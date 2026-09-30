@@ -23,6 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.timelens.app.domain.model.AppCategory
 import com.timelens.app.domain.model.DaySummary
+import com.timelens.app.domain.model.WellnessReport
 import com.timelens.app.presentation.components.*
 import com.timelens.app.presentation.theme.*
 import com.timelens.app.util.TimeFormatter
@@ -117,6 +118,7 @@ fun HomeScreen(
                         summary = state.summary,
                         comparisonText = state.comparisonText,
                         dailyGoalHours = state.dailyGoalHours,
+                        wellnessReport = state.wellnessReport,
                         onAppClick = onAppClick
                     )
                 }
@@ -130,6 +132,7 @@ fun HomeContent(
     summary: DaySummary,
     comparisonText: String,
     dailyGoalHours: Int = 6,
+    wellnessReport: WellnessReport? = null,
     onAppClick: (String) -> Unit = {}
 ) {
     val dailyGoalMs = dailyGoalHours * 60 * 60 * 1000L
@@ -202,6 +205,13 @@ fun HomeContent(
                     accentColor = NeonBlue,
                     modifier = Modifier.weight(1f)
                 )
+            }
+        }
+
+        // Resumen de Bienestar: Diagnóstico, Alertas y Consejos
+        if (wellnessReport != null) {
+            item {
+                WellnessSummaryCard(report = wellnessReport)
             }
         }
 

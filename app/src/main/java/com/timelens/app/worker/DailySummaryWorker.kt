@@ -5,6 +5,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.timelens.app.data.local.prefs.UserPreferencesManager
 import com.timelens.app.domain.repository.UsageRepository
+import com.timelens.app.domain.usecase.GetWellnessReportUseCase
 import com.timelens.app.notification.TimeLensNotificationManager
 import com.timelens.app.util.TimeFormatter
 import dagger.hilt.EntryPoint
@@ -24,6 +25,7 @@ class DailySummaryWorker(
         fun repository(): UsageRepository
         fun notificationManager(): TimeLensNotificationManager
         fun prefsManager(): UserPreferencesManager
+        fun wellnessReportUseCase(): GetWellnessReportUseCase
     }
 
     override suspend fun doWork(): Result {
@@ -39,6 +41,7 @@ class DailySummaryWorker(
 
             val repository = entryPoint.repository()
             val notificationManager = entryPoint.notificationManager()
+            val wellnessUseCase = entryPoint.wellnessReportUseCase()
 
             val summary = repository.getTodaySummary()
             val yesterday = repository.getDaySummary(LocalDate.now().minusDays(1))
@@ -50,7 +53,13 @@ class DailySummaryWorker(
                 "Meta: ${goal}h"
             }
 
-            notificationManager.showDailySummaryNotification(summary, comparisonText)
+            val report = wellnessUseCase(summary, yesterday, goal)
+
+            notificationManager.showDailySummaryNotification(
+                summary = summary,
+                comparisonText = comparisonText,
+                insight = report.primaryInsight
+            )
 
             Result.success()
         } catch (e: Exception) {

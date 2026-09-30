@@ -170,7 +170,11 @@ class TimeLensNotificationManager @Inject constructor(
         return true
     }
 
-    fun showDailySummaryNotification(summary: DaySummary, comparisonText: String): Boolean {
+    fun showDailySummaryNotification(
+        summary: DaySummary,
+        comparisonText: String,
+        insight: com.timelens.app.domain.model.WellnessInsight? = null
+    ): Boolean {
         createNotificationChannels()
         if (!hasNotificationPermission()) {
             android.util.Log.w("TimeLensNotify", "Permiso no concedido para showDailySummaryNotification")
@@ -181,11 +185,22 @@ class TimeLensNotificationManager @Inject constructor(
         val topApp = summary.topApps.firstOrNull()?.appName ?: "Sin uso"
         val topAppTime = summary.topApps.firstOrNull()?.let { TimeFormatter.formatMillisToShort(it.totalTimeMs) } ?: "0m"
 
-        val shortContent = "Uso total: $formattedTotal ($comparisonText). Desbloqueos: ${summary.totalUnlocks}."
-        val expandedContent = "Hoy usaste tu teléfono $formattedTotal ($comparisonText).\n" +
-                "• App principal: $topApp ($topAppTime)\n" +
-                "• Desbloqueos: ${summary.totalUnlocks}\n" +
-                "• Sesión más larga: ${summary.longestSession?.let { TimeFormatter.formatMillisToShort(it.durationMs) } ?: "0m"}"
+        val shortContent = if (insight != null) {
+            "${insight.title} • $formattedTotal ($comparisonText)"
+        } else {
+            "Uso total: $formattedTotal ($comparisonText). Desbloqueos: ${summary.totalUnlocks}."
+        }
+
+        val expandedContent = buildString {
+            append("Hoy usaste tu teléfono $formattedTotal ($comparisonText).\n")
+            append("• App principal: $topApp ($topAppTime)\n")
+            append("• Desbloqueos: ${summary.totalUnlocks}\n")
+            append("• Sesión más larga: ${summary.longestSession?.let { TimeFormatter.formatMillisToShort(it.durationMs) } ?: "0m"}")
+            if (insight != null) {
+                append("\n\n💡 Consejo de Bienestar:\n")
+                append("${insight.title}: ${insight.actionTip}")
+            }
+        }
 
         val notification = NotificationCompat.Builder(context, CHANNEL_SUMMARY_ID)
             .setSmallIcon(R.drawable.ic_notification)
