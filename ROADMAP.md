@@ -169,9 +169,10 @@
 - [x] ForegroundService liviano para monitoreo (`UsageMonitorService`)
 - [x] Gestión de permisos en tiempo de ejecución (`POST_NOTIFICATIONS` en Android 13+)
 - [x] Panel de prueba y control interactivo en pantalla de Ajustes
+- [x] Tarjeta interactiva de "Resumen de Bienestar" (`WellnessSummaryCard`) en pantalla de inicio con diagnóstico en tiempo real y consejos prácticos
 
 ### 🎯 Entregable
-> Notificaciones inteligentes funcionando sin drenar batería.
+> Notificaciones inteligentes funcionando sin drenar batería y tarjeta de diagnóstico diario de bienestar activa.
 
 ---
 

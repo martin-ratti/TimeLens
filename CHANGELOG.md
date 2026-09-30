@@ -25,8 +25,23 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - El botón de configuración en la barra superior de Home ahora sincroniza de manera limpia con la barra de navegación inferior (`popUpTo` al destino inicial con `launchSingleTop = true`), evitando pantallas duplicadas o estados rotos en la pila de navegación.
 - 🛡️ **Protección contra divisiones por cero**:
   - Validación defensiva para evitar valores `NaN` en cálculos de progreso cuando el tiempo total o meta diaria sea 0.
+- 🔔 **Manejo Dinámico de Permiso `POST_NOTIFICATIONS` en Android 13+**:
+  - Corrección de fallos silenciosos al pulsar botones de prueba de notificaciones cuando el permiso no estaba otorgado por el sistema.
+  - Inclusión de banner de advertencia visual en la pantalla de Ajustes con botón para conceder el permiso en un solo toque, y disparo automático del diálogo nativo del sistema al interactuar con las pruebas.
 
 ### Agregado
+- 🧘 **Tarjeta Interactiva de Diagnóstico y Resumen de Bienestar (`WellnessSummaryCard`)**:
+  - Nueva tarjeta inteligente ubicada en la pantalla de inicio (`HomeScreen`) justo después de los KPIs de uso.
+  - **Diagnóstico multidimensional en tiempo real**:
+    - Frecuencia y compulsividad de desbloqueos (alerta si supera 60/día).
+    - Detección de sesiones maratónicas (>= 40 min continuos) con recomendación de descanso visual (regla 20-20-20).
+    - Evaluación de ritmo frente a la meta diaria y comparativa con el día anterior.
+    - Detección de uso nocturno tardío y predominio de redes sociales o entretenimiento.
+  - **Diseño visual inmersivo**:
+    - Borde dinámico con gradiente neón según nivel de alerta (Excelente, Moderado, Atención o Crítico).
+    - Carrusel paginado interactivo con botones prev/next para navegar por todas las observaciones detectadas en la jornada.
+    - Bloque de consejo práctico accionable para reducir el desgaste cognitivo y fatiga visual.
+  - Sincronización con el resumen diario programado (`DailySummaryWorker`) a las 22:00 hs.
 - 🏷️ **Filtro interactivo por Categorías en Inicio**:
   - Fila interactiva con chip *"Todas"* y chips por categoría que filtran instantáneamente la lista de aplicaciones más usadas.
 - 📈 **Rediseño Completo de la Pantalla de Tendencias (`HistoryScreen`)**:
