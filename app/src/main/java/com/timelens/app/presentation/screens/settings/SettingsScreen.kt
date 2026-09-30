@@ -278,6 +278,10 @@ fun SettingsScreen(
                         }
 
                         if (onNavigateToSummary != null) {
+                            val isNight = remember {
+                                val h = java.time.LocalTime.now().hour
+                                h >= 21 || h < 5
+                            }
                             TextButton(
                                 onClick = onNavigateToSummary,
                                 modifier = Modifier
@@ -286,15 +290,15 @@ fun SettingsScreen(
                                 contentPadding = PaddingValues(vertical = 4.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Outlined.Bedtime,
+                                    imageVector = if (isNight) Icons.Outlined.Bedtime else Icons.Outlined.Insights,
                                     contentDescription = null,
-                                    tint = NeonPurple,
+                                    tint = if (isNight) NeonPurple else NeonCyan,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Ver cierre del día de hoy",
-                                    color = NeonPurple,
+                                    if (isNight) "Ver cierre del día de hoy" else "Ver diagnóstico del día de hoy",
+                                    color = if (isNight) NeonPurple else NeonCyan,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )

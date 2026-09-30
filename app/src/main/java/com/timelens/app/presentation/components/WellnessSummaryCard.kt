@@ -261,12 +261,17 @@ fun WellnessSummaryCard(
                         }
                     }
 
+                    val isNightHour = remember {
+                        val h = java.time.LocalTime.now().hour
+                        h >= 21 || h < 5
+                    }
+
                     TextButton(
                         onClick = onViewFullSummary,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            text = "Ver cierre del día",
+                            text = if (isNightHour) "Ver cierre del día" else "Ver diagnóstico y consejos",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = accentColor

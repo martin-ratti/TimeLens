@@ -37,7 +37,7 @@ fun AppNavHost(
 
     LaunchedEffect(navigateToRoute) {
         if (!navigateToRoute.isNullOrBlank()) {
-            if (navigateToRoute == "daily_summary" || navigateToRoute == "daily_debrief") {
+            if (navigateToRoute == "daily_summary" || navigateToRoute == "daily_debrief" || navigateToRoute == "daily_summary_night") {
                 openDebriefOnHome = true
                 navController.navigate(NavRoutes.Home.route) {
                     popUpTo(navController.graph.findStartDestination().id) {

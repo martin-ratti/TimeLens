@@ -53,7 +53,7 @@ class DailySummaryWorker(
                 "Meta: ${goal}h"
             }
 
-            val report = wellnessUseCase(summary, yesterday, goal)
+            val report = wellnessUseCase(summary, yesterday, goal, isNightReview = true)
 
             notificationManager.showDailySummaryNotification(
                 summary = summary,

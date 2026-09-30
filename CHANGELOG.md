@@ -20,6 +20,18 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - Jerarquía tipográfica pulida y adaptativa para evitar desbordes y cortes de texto en pantallas compactas (360dp a 390dp).
   - Unificación visual transversal aplicada en `HomeScreen`, `AppDetailScreen` y `HistoryScreen`.
 
+- 💡 **Motor de Recomendaciones Dinámicas y Contextuales (Sin Hardcoding)**:
+  - Análisis exhaustivo de los hábitos reales del usuario en [`GetWellnessReportUseCase`]:
+    - **Control y meta**: cálculo de exceso exacto con tips para pausar pantallas o felicitación con tiempo restante disponible.
+    - **Desbloqueos compulsivos**: conteo real de aperturas y pautas para agrupar consultas o alejar el móvil del campo visual.
+    - **Fatiga visual**: detección de la aplicación específica de sesiones maratónicas (ej. Instagram, TikTok) con técnica Pomodoro o regla 20-20-20.
+    - **Balance por categorías**: consejos específicos si predominan redes sociales (>35%), juegos, videos o herramientas productivas.
+    - **Evolución diaria**: cálculo porcentual de reducción o aumento respecto a la jornada anterior.
+  - [`DailyDebriefBottomSheet`] renderiza una lista de múltiples recomendaciones estructuradas en tarjetas con íconos vectoriales, badges de categoría y tips de acción concretos.
+- ⏰ **Adaptabilidad Temporal y Apertura Inteligente**:
+  - **Apertura manual en cualquier momento ("cuando quiero")**: interfaz atemporal ("Diagnóstico de Hábitos de Hoy", ícono vectorial `Insights`, botón "Entendido") sin alusiones forzadas a la noche o a ir a dormir.
+  - **Apertura desde la notificación de las 22:00 hs ("revisión nocturna")**: deep link `"daily_summary_night"` activa el modo Cierre Nocturno ("Tu Cierre del Día", ícono `Bedtime`, botón "A descansar" y tarjeta destacada de revisión para desconectar antes de dormir).
+
 - 🎨 **Consistencia Visual con Material Icons (Sin dependencia de emojis en texto)**:
   - Reemplazo transversal de emojis embebidos en cadenas de texto por componentes nativos `Icon` de la biblioteca extendida de Material Icons (`androidx.compose.material.icons`).
   - Badges de estado en `WellnessSummaryCard` y `DailyDebriefBottomSheet` utilizan íconos vectoriales dinámicos (`CheckCircle`, `Balance`, `WarningAmber`, `ErrorOutline`).

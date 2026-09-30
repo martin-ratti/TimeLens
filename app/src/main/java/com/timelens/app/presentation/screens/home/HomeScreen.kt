@@ -41,10 +41,15 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val currentHour = remember { java.time.LocalTime.now().hour }
+    val isNightHour = currentHour >= 21 || currentHour < 5
+
     var showDebriefSheet by rememberSaveable { mutableStateOf(openDebriefDirectly) }
+    var isNightDebrief by rememberSaveable { mutableStateOf(openDebriefDirectly) }
 
     LaunchedEffect(openDebriefDirectly) {
         if (openDebriefDirectly) {
+            isNightDebrief = true
             showDebriefSheet = true
         }
     }
@@ -55,12 +60,13 @@ fun HomeScreen(
             val dateFormatted = java.time.LocalDate.now().format(
                 java.time.format.DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", java.util.Locale("es", "ES"))
             ).replaceFirstChar { it.uppercase() }
+            val shareHeader = if (isNightDebrief) "🌙 Cierre de Bienestar TimeLens" else "📊 Diagnóstico de Hábitos TimeLens"
             val shareText = buildString {
-                append("📊 Cierre de Bienestar TimeLens — $dateFormatted\n\n")
+                append("$shareHeader — $dateFormatted\n\n")
                 append("⏱️ Tiempo de pantalla: ${TimeFormatter.formatMillisToShort(state.summary.totalScreenTimeMs)} (${state.comparisonText})\n")
                 append("🌱 Score de Bienestar: ${state.wellnessReport.overallScore}/100 (${state.wellnessReport.overallStatus})\n")
                 append("🔓 Desbloqueos: ${state.summary.totalUnlocks} veces\n")
-                append("💡 Consejo de hoy: ${state.wellnessReport.primaryInsight.title}: ${state.wellnessReport.primaryInsight.actionTip}\n\n")
+                append("💡 Consejo destacado: ${state.wellnessReport.primaryInsight.title}: ${state.wellnessReport.primaryInsight.actionTip}\n\n")
                 append("Seguimiento consciente con #TimeLens")
             }
             val sendIntent = Intent().apply {
@@ -68,7 +74,7 @@ fun HomeScreen(
                 putExtra(Intent.EXTRA_TEXT, shareText)
                 type = "text/plain"
             }
-            context.startActivity(Intent.createChooser(sendIntent, "Compartir cierre del día"))
+            context.startActivity(Intent.createChooser(sendIntent, "Compartir reporte"))
         }
     }
 
@@ -92,11 +98,14 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showDebriefSheet = true }) {
+                    IconButton(onClick = {
+                        isNightDebrief = isNightHour
+                        showDebriefSheet = true
+                    }) {
                         Icon(
-                            imageVector = Icons.Outlined.Bedtime,
-                            contentDescription = "Cierre del Día",
-                            tint = NeonPurple
+                            imageVector = if (isNightHour) Icons.Outlined.Bedtime else Icons.Outlined.Insights,
+                            contentDescription = if (isNightHour) "Cierre del Día" else "Diagnóstico del Día",
+                            tint = if (isNightHour) NeonPurple else NeonCyan
                         )
                     }
                     IconButton(onClick = onNavigateToSettings) {
@@ -161,7 +170,10 @@ fun HomeScreen(
                         dailyGoalHours = state.dailyGoalHours,
                         wellnessReport = state.wellnessReport,
                         onAppClick = onAppClick,
-                        onNavigateToSummary = { showDebriefSheet = true }
+                        onNavigateToSummary = {
+                            isNightDebrief = isNightHour
+                            showDebriefSheet = true
+                        }
                     )
                 }
             }
@@ -175,6 +187,7 @@ fun HomeScreen(
                     summary = success.summary,
                     comparisonText = success.comparisonText,
                     dailyGoalHours = success.dailyGoalHours,
+                    isNightReview = isNightDebrief,
                     onDismiss = { showDebriefSheet = false },
                     onShare = onShareReport
                 )

@@ -207,7 +207,7 @@ class TimeLensNotificationManager @Inject constructor(
             append("\n\n👉 Tocá para abrir tu cierre del día en TimeLens.")
         }
 
-        val summaryPendingIntent = getMainActivityPendingIntent("daily_summary")
+        val summaryPendingIntent = getMainActivityPendingIntent("daily_summary_night")
 
         val notification = NotificationCompat.Builder(context, CHANNEL_SUMMARY_ID)
             .setSmallIcon(R.drawable.ic_notification)

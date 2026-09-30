@@ -16,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,6 +34,7 @@ fun DailyDebriefBottomSheet(
     summary: DaySummary,
     comparisonText: String,
     dailyGoalHours: Int,
+    isNightReview: Boolean = false,
     onDismiss: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier
@@ -58,6 +61,11 @@ fun DailyDebriefBottomSheet(
         ).replaceFirstChar { it.uppercase() }
     }
 
+    val headerIcon = if (isNightReview) Icons.Outlined.Bedtime else Icons.Outlined.Insights
+    val headerIconTint = if (isNightReview) NeonPurple else NeonCyan
+    val headerTitle = if (isNightReview) "Tu Cierre del Día" else "Diagnóstico de Hábitos de Hoy"
+    val headerSubtitle = if (isNightReview) "$dateFormatted • Revisión Nocturna" else dateFormatted
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -73,39 +81,39 @@ fun DailyDebriefBottomSheet(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header: Título y Fecha
+            // Header: Título, ícono contextual y Fecha
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(42.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(NeonPurple.copy(alpha = 0.15f)),
+                            .background(headerIconTint.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Bedtime,
+                            imageVector = headerIcon,
                             contentDescription = null,
-                            tint = NeonPurple,
+                            tint = headerIconTint,
                             modifier = Modifier.size(22.dp)
                         )
                     }
                     Column {
                         Text(
-                            text = "Tu Cierre del Día",
+                            text = headerTitle,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = dateFormatted,
+                            text = headerSubtitle,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -189,13 +197,23 @@ fun DailyDebriefBottomSheet(
                                 )
                             }
                         }
+                        val statusDesc = if (isNightReview) {
+                            when {
+                                report.overallScore >= 80 -> "¡Gran autocontrol! Cerrás la jornada con excelente balance."
+                                report.overallScore >= 60 -> "Jornada estable con buen ritmo frente a tu objetivo diario."
+                                report.overallScore >= 40 -> "Se observaron momentos de dispersión o fatiga acumulada hoy."
+                                else -> "Día intenso con exceso de pantalla; momento ideal para desconectar."
+                            }
+                        } else {
+                            when {
+                                report.overallScore >= 80 -> "¡Gran autocontrol! Mantenés un uso consciente y equilibrado."
+                                report.overallScore >= 60 -> "Ritmo de pantalla estable y balanceado frente a tu objetivo."
+                                report.overallScore >= 40 -> "Atención a momentos de distracción o fatiga visual acumulada."
+                                else -> "Uso intenso con exceso de pantalla; considerá hacer pausas activas."
+                            }
+                        }
                         Text(
-                            text = when {
-                                report.overallScore >= 80 -> "¡Gran autocontrol! Tuviste un día consciente y equilibrado."
-                                report.overallScore >= 60 -> "Día estable, con buen ritmo frente a tu objetivo."
-                                report.overallScore >= 40 -> "Se observaron momentos de distracción o fatiga visual."
-                                else -> "Día intenso con exceso de pantalla respecto a tu meta."
-                            },
+                            text = statusDesc,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             lineHeight = 18.sp
@@ -204,7 +222,7 @@ fun DailyDebriefBottomSheet(
                 }
             }
 
-            // 2. Resumen Cualitativo de Hábitos (Directo al grano, sin tablas repetidas)
+            // 2. Resumen Cualitativo de Hábitos Clave
             Text(
                 text = "Puntos destacados de tu jornada:",
                 style = MaterialTheme.typography.titleMedium,
@@ -216,7 +234,6 @@ fun DailyDebriefBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Total y comparativa
                 HabitHighlightItem(
                     icon = Icons.Outlined.Timer,
                     iconTint = NeonBlue,
@@ -224,7 +241,6 @@ fun DailyDebriefBottomSheet(
                     subtitle = "$comparisonText • Objetivo: ${dailyGoalHours}h"
                 )
 
-                // Desbloqueos
                 HabitHighlightItem(
                     icon = Icons.Outlined.LockOpen,
                     iconTint = if (summary.totalUnlocks > 60) NeonOrange else NeonGreen,
@@ -232,7 +248,6 @@ fun DailyDebriefBottomSheet(
                     subtitle = if (summary.totalUnlocks > 60) "Frecuencia alta (micro-interrupciones)" else "Nivel controlado de aperturas"
                 )
 
-                // Sesión más larga (si existe)
                 summary.longestSession?.let { longest ->
                     if (longest.durationMs >= 20 * 60 * 1000L) {
                         HabitHighlightItem(
@@ -245,38 +260,22 @@ fun DailyDebriefBottomSheet(
                 }
             }
 
-            // 3. Caja de Consejo para Desconectar esta Noche
-            Surface(
+            // 3. Recomendaciones Personalizadas Dinámicas (Múltiples)
+            Text(
+                text = if (isNightReview) "Revisión nocturna y recomendaciones:" else "Recomendaciones personalizadas para hoy:",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            val displayInsights = report.allInsights.ifEmpty { listOf(report.primaryInsight) }.take(4)
+
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = NeonCyan.copy(alpha = 0.08f),
-                border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.22f))
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.TipsAndUpdates,
-                        contentDescription = null,
-                        tint = NeonCyan,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "Consejo para esta noche:",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonCyan
-                        )
-                        Text(
-                            text = report.primaryInsight.actionTip,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            lineHeight = 18.sp
-                        )
-                    }
+                displayInsights.forEach { insight ->
+                    RecommendationCard(insight = insight)
                 }
             }
 
@@ -284,7 +283,7 @@ fun DailyDebriefBottomSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp),
+                    .padding(top = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
@@ -315,10 +314,10 @@ fun DailyDebriefBottomSheet(
                         .weight(1f)
                         .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonBlue)
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isNightReview) NeonPurple else NeonBlue)
                 ) {
                     Text(
-                        text = "A descansar",
+                        text = if (isNightReview) "A descansar" else "Entendido",
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -328,9 +327,103 @@ fun DailyDebriefBottomSheet(
 }
 
 @Composable
+private fun RecommendationCard(
+    insight: WellnessInsight,
+    modifier: Modifier = Modifier
+) {
+    val accentColor = when (insight.level) {
+        InsightLevel.EXCELLENT -> NeonGreen
+        InsightLevel.MODERATE -> NeonCyan
+        InsightLevel.ATTENTION -> NeonOrange
+        InsightLevel.CRITICAL -> NeonRed
+    }
+
+    val icon: ImageVector = when (insight.category) {
+        InsightCategory.SCREEN_TIME -> Icons.Outlined.Timer
+        InsightCategory.UNLOCKS -> Icons.Outlined.LockOpen
+        InsightCategory.SESSION_LENGTH -> Icons.Outlined.Visibility
+        InsightCategory.APP_BALANCE -> Icons.Outlined.Apps
+        InsightCategory.NIGHT_USAGE -> Icons.Outlined.Bedtime
+    }
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        border = BorderStroke(1.dp, accentColor.copy(alpha = 0.25f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(accentColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Text(
+                    text = insight.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Text(
+                text = insight.message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 18.sp
+            )
+
+            // Tip accionable concreto
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = accentColor.copy(alpha = 0.08f),
+                border = BorderStroke(0.8.dp, accentColor.copy(alpha = 0.2f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lightbulb,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = insight.actionTip,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 16.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun HabitHighlightItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    iconTint: androidx.compose.ui.graphics.Color,
+    icon: ImageVector,
+    iconTint: Color,
     title: String,
     subtitle: String
 ) {
