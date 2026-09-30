@@ -42,6 +42,7 @@ fun HomeScreen(
     onAppClick: (String) -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     openDebriefDirectly: Boolean = false,
+    onDismissDebrief: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -51,12 +52,12 @@ fun HomeScreen(
     val currentHour = remember { java.time.LocalTime.now().hour }
     val isNightHour = currentHour >= 21 || currentHour < 5
 
-    var showDebriefSheet by rememberSaveable { mutableStateOf(openDebriefDirectly) }
-    var isNightDebrief by rememberSaveable { mutableStateOf(openDebriefDirectly) }
+    var showDebriefSheet by rememberSaveable { mutableStateOf(false) }
+    var isNightDebrief by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(openDebriefDirectly) {
         if (openDebriefDirectly) {
-            isNightDebrief = true
+            isNightDebrief = isNightHour
             showDebriefSheet = true
         }
     }
@@ -214,7 +215,10 @@ fun HomeScreen(
                     comparisonText = success.comparisonText,
                     dailyGoalHours = success.dailyGoalHours,
                     isNightReview = isNightDebrief,
-                    onDismiss = { showDebriefSheet = false },
+                    onDismiss = {
+                        showDebriefSheet = false
+                        onDismissDebrief()
+                    },
                     onShare = onShareReport
                 )
             }
@@ -484,12 +488,21 @@ fun HomeContent(
                 } else {
                     0f
                 }
+                val catAccent = when (appInfo.category) {
+                    AppCategory.PRODUCTIVITY -> NeonGreen
+                    AppCategory.SOCIAL -> NeonPurple
+                    AppCategory.ENTERTAINMENT -> NeonOrange
+                    AppCategory.COMMUNICATION -> NeonCyan
+                    AppCategory.GAMING -> NeonRed
+                    AppCategory.EDUCATION -> NeonBlue
+                    else -> NeonBlue
+                }
                 AppUsageCard(
                     icon = appInfo.icon ?: Icons.Outlined.Apps,
                     appName = appInfo.appName,
                     usageTime = TimeFormatter.formatMillisToShort(appInfo.totalTimeMs),
                     progress = appProgress,
-                    accentColor = NeonPurple,
+                    accentColor = catAccent,
                     sessionCount = appInfo.sessionCount,
                     category = appInfo.category,
                     onClick = { onAppClick(appInfo.packageName) }

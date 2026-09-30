@@ -224,6 +224,17 @@ class UsageRepositoryImpl @Inject constructor(
             it.date to it.totalTimeMs
         }.reversed()
 
+        val totalDailyScreenTimeMs = metrics.appUsageMap.values.sum()
+        val peakHour = hourlyUsage.maxByOrNull { it.value }?.key ?: 0
+        val weeklyAverageMs = if (weeklyHistory.isNotEmpty()) {
+            weeklyHistory.map { it.second }.average().toLong()
+        } else {
+            0L
+        }
+        val lastUsedTimestampMs = events
+            .filter { it.packageName == packageName && (it.eventType == 1 || it.eventType == 2) }
+            .maxOfOrNull { it.timeStamp } ?: 0L
+
         com.timelens.app.domain.model.AppDetailInfo(
             packageName = packageName,
             appName = dataSource.getAppName(packageName),
@@ -234,7 +245,11 @@ class UsageRepositoryImpl @Inject constructor(
             longestSessionMs = longestSessionMs,
             avgSessionMs = avgSessionMs,
             hourlyUsageMs = hourlyUsage,
-            weeklyHistory = weeklyHistory
+            weeklyHistory = weeklyHistory,
+            totalDailyScreenTimeMs = totalDailyScreenTimeMs,
+            peakHour = peakHour,
+            weeklyAverageMs = weeklyAverageMs,
+            lastUsedTimestampMs = lastUsedTimestampMs
         )
     }
 

@@ -33,5 +33,9 @@ data class AppDetailInfo(
     val longestSessionMs: Long = 0L,
     val avgSessionMs: Long = 0L,
     val hourlyUsageMs: Map<Int, Long> = emptyMap(), // 0..23 hours -> ms
-    val weeklyHistory: List<Pair<String, Long>> = emptyList() // Date -> totalTimeMs
+    val weeklyHistory: List<Pair<String, Long>> = emptyList(), // Date -> totalTimeMs
+    val totalDailyScreenTimeMs: Long = 0L,
+    val peakHour: Int = 0,
+    val weeklyAverageMs: Long = 0L,
+    val lastUsedTimestampMs: Long = 0L
 )

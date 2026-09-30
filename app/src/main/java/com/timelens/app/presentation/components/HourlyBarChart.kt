@@ -25,7 +25,9 @@ import com.timelens.app.util.TimeFormatter
 fun HourlyBarChart(
     hourlyUsageMs: Map<Int, Long>,
     modifier: Modifier = Modifier,
-    barColor: Color = NeonBlue
+    barColor: Color = NeonBlue,
+    peakHour: Int? = null,
+    peakColor: Color = com.timelens.app.presentation.theme.NeonCyan
 ) {
     val maxMs = remember(hourlyUsageMs) {
         hourlyUsageMs.values.maxOrNull()?.coerceAtLeast(1L) ?: 1L
@@ -85,17 +87,31 @@ fun HourlyBarChart(
                         },
                     contentAlignment = Alignment.BottomCenter
                 ) {
+                    val isPeak = peakHour == hour && ms > 0
+                    val barWidth = when {
+                        isSelected -> 8.dp
+                        isPeak -> 8.dp
+                        else -> 6.dp
+                    }
+
                     Canvas(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .width(if (isSelected) 8.dp else 6.dp)
+                            .width(barWidth)
                     ) {
                         val canvasHeight = size.height
                         val canvasWidth = size.width
                         val barHeight = (canvasHeight * heightFraction).coerceAtLeast(if (ms > 0) 6f else 0f)
 
+                        val drawColor = when {
+                            ms <= 0 -> Color.Transparent
+                            isSelected -> onSurfaceColor
+                            isPeak -> peakColor
+                            else -> barColor
+                        }
+
                         drawRoundRect(
-                            color = if (ms > 0) (if (isSelected) onSurfaceColor else barColor) else Color.Transparent,
+                            color = drawColor,
                             topLeft = Offset(0f, canvasHeight - barHeight),
                             size = Size(canvasWidth, barHeight),
                             cornerRadius = CornerRadius(3f, 3f)

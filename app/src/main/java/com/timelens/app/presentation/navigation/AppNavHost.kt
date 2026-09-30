@@ -76,6 +76,9 @@ fun AppNavHost(
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
+                                if (item == BottomNavItem.HOME) {
+                                    openDebriefOnHome = false
+                                }
                                 navController.navigate(item.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
                                         saveState = true
@@ -138,7 +141,8 @@ fun AppNavHost(
                             restoreState = true
                         }
                     },
-                    openDebriefDirectly = openDebriefOnHome
+                    openDebriefDirectly = openDebriefOnHome,
+                    onDismissDebrief = { openDebriefOnHome = false }
                 )
             }
             composable(
