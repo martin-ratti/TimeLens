@@ -34,6 +34,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     onAppClick: (String) -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToSummary: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -58,6 +59,13 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToSummary) {
+                        Icon(
+                            imageVector = Icons.Outlined.Analytics,
+                            contentDescription = "Resumen Diario",
+                            tint = NeonCyan
+                        )
+                    }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
@@ -119,7 +127,8 @@ fun HomeScreen(
                         comparisonText = state.comparisonText,
                         dailyGoalHours = state.dailyGoalHours,
                         wellnessReport = state.wellnessReport,
-                        onAppClick = onAppClick
+                        onAppClick = onAppClick,
+                        onNavigateToSummary = onNavigateToSummary
                     )
                 }
             }
@@ -133,7 +142,8 @@ fun HomeContent(
     comparisonText: String,
     dailyGoalHours: Int = 6,
     wellnessReport: WellnessReport? = null,
-    onAppClick: (String) -> Unit = {}
+    onAppClick: (String) -> Unit = {},
+    onNavigateToSummary: () -> Unit = {}
 ) {
     val dailyGoalMs = dailyGoalHours * 60 * 60 * 1000L
     val progress = if (dailyGoalMs > 0L) {
@@ -211,7 +221,10 @@ fun HomeContent(
         // Resumen de Bienestar: Diagnóstico, Alertas y Consejos
         if (wellnessReport != null) {
             item {
-                WellnessSummaryCard(report = wellnessReport)
+                WellnessSummaryCard(
+                    report = wellnessReport,
+                    onViewFullSummary = onNavigateToSummary
+                )
             }
         }
 

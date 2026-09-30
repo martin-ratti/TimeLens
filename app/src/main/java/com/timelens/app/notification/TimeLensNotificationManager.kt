@@ -88,16 +88,20 @@ class TimeLensNotificationManager @Inject constructor(
         }
     }
 
-    private fun getMainActivityPendingIntent(): PendingIntent {
+    private fun getMainActivityPendingIntent(route: String? = null): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            if (route != null) {
+                putExtra("EXTRA_NAV_ROUTE", route)
+            }
         }
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         } else {
             PendingIntent.FLAG_UPDATE_CURRENT
         }
-        return PendingIntent.getActivity(context, 0, intent, flags)
+        val requestCode = route?.hashCode() ?: 0
+        return PendingIntent.getActivity(context, requestCode, intent, flags)
     }
 
     fun showGoalExceededNotification(usedMillis: Long, goalHours: Int): Boolean {
@@ -186,9 +190,9 @@ class TimeLensNotificationManager @Inject constructor(
         val topAppTime = summary.topApps.firstOrNull()?.let { TimeFormatter.formatMillisToShort(it.totalTimeMs) } ?: "0m"
 
         val shortContent = if (insight != null) {
-            "${insight.title} • $formattedTotal ($comparisonText)"
+            "💡 ${insight.actionTip}"
         } else {
-            "Uso total: $formattedTotal ($comparisonText). Desbloqueos: ${summary.totalUnlocks}."
+            "Uso total: $formattedTotal ($comparisonText) • Desbloqueos: ${summary.totalUnlocks}."
         }
 
         val expandedContent = buildString {
@@ -197,19 +201,28 @@ class TimeLensNotificationManager @Inject constructor(
             append("• Desbloqueos: ${summary.totalUnlocks}\n")
             append("• Sesión más larga: ${summary.longestSession?.let { TimeFormatter.formatMillisToShort(it.durationMs) } ?: "0m"}")
             if (insight != null) {
-                append("\n\n💡 Consejo de Bienestar:\n")
+                append("\n\n💡 Diagnóstico & Consejo:\n")
                 append("${insight.title}: ${insight.actionTip}")
             }
+            append("\n\n👉 Tocá para abrir tu análisis completo en TimeLens.")
         }
+
+        val summaryPendingIntent = getMainActivityPendingIntent("daily_summary")
 
         val notification = NotificationCompat.Builder(context, CHANNEL_SUMMARY_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("🌙 Resumen del día — TimeLens")
+            .setContentTitle("🌙 Resumen de Bienestar — TimeLens")
             .setContentText(shortContent)
+            .setSubText(formattedTotal)
             .setStyle(NotificationCompat.BigTextStyle().bigText(expandedContent))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
-            .setContentIntent(getMainActivityPendingIntent())
+            .setContentIntent(summaryPendingIntent)
+            .addAction(
+                R.drawable.ic_notification,
+                "Ver Análisis Completo",
+                summaryPendingIntent
+            )
             .build()
 
         notificationManager.notify(NOTIFICATION_ID_SUMMARY, notification)

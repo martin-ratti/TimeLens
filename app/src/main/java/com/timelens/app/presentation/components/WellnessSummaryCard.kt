@@ -30,7 +30,8 @@ import com.timelens.app.presentation.theme.*
 @Composable
 fun WellnessSummaryCard(
     report: WellnessReport,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onViewFullSummary: (() -> Unit)? = null
 ) {
     var currentIndex by remember(report) { mutableIntStateOf(0) }
     val insights = report.allInsights.ifEmpty { listOf(report.primaryInsight) }
@@ -206,6 +207,46 @@ fun WellnessSummaryCard(
                                 )
                             }
                         }
+                    }
+                }
+            }
+
+            if (onViewFullSummary != null) {
+                HorizontalDivider(
+                    color = accentColor.copy(alpha = 0.15f),
+                    thickness = 0.8.dp,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Score de hoy: ${report.overallScore}/100",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = accentColor,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    TextButton(
+                        onClick = onViewFullSummary,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Ver análisis completo",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = accentColor
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
             }

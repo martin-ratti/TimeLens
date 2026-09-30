@@ -38,6 +38,7 @@ import com.timelens.app.presentation.theme.*
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
+    onNavigateToSummary: (() -> Unit)? = null,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val dailyGoal by viewModel.dailyGoalHours.collectAsStateWithLifecycle()
@@ -273,6 +274,30 @@ fun SettingsScreen(
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                             ) {
                                 Text("Probar resumen", color = NeonPurple, fontSize = 12.sp, maxLines = 1)
+                            }
+                        }
+
+                        if (onNavigateToSummary != null) {
+                            TextButton(
+                                onClick = onNavigateToSummary,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 2.dp),
+                                contentPadding = PaddingValues(vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Analytics,
+                                    contentDescription = null,
+                                    tint = NeonCyan,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Abrir pantalla de resumen de hoy",
+                                    color = NeonCyan,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
                     }

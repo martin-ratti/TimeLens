@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -20,14 +21,24 @@ import com.timelens.app.presentation.screens.history.HistoryScreen
 import com.timelens.app.presentation.screens.home.HomeScreen
 import com.timelens.app.presentation.screens.onboarding.OnboardingScreen
 import com.timelens.app.presentation.screens.settings.SettingsScreen
+import com.timelens.app.presentation.screens.summary.DailySummaryScreen
 import com.timelens.app.presentation.theme.NeonBlue
 
 @Composable
 fun AppNavHost(
     modifier: Modifier = Modifier,
-    startDestination: String = NavRoutes.Home.route
+    startDestination: String = NavRoutes.Home.route,
+    navigateToRoute: String? = null
 ) {
     val navController = rememberNavController()
+
+    LaunchedEffect(navigateToRoute) {
+        if (!navigateToRoute.isNullOrBlank()) {
+            navController.navigate(navigateToRoute) {
+                launchSingleTop = true
+            }
+        }
+    }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val context = LocalContext.current
@@ -113,6 +124,9 @@ fun AppNavHost(
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onNavigateToSummary = {
+                        navController.navigate(NavRoutes.DailySummary.route)
                     }
                 )
             }
@@ -130,7 +144,19 @@ fun AppNavHost(
                 HistoryScreen()
             }
             composable(NavRoutes.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(
+                    onNavigateToSummary = {
+                        navController.navigate(NavRoutes.DailySummary.route)
+                    }
+                )
+            }
+            composable(NavRoutes.DailySummary.route) {
+                DailySummaryScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onAppClick = { packageName ->
+                        navController.navigate(NavRoutes.AppDetail.createRoute(packageName))
+                    }
+                )
             }
         }
     }

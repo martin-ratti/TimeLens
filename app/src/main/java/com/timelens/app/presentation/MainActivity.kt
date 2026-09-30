@@ -1,10 +1,12 @@
 package com.timelens.app.presentation
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.timelens.app.data.local.prefs.UserPreferencesManager
 import com.timelens.app.domain.usecase.CheckUsagePermissionUseCase
@@ -23,10 +25,14 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var prefsManager: UserPreferencesManager
 
+    private val targetNavRoute = mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
+        targetNavRoute.value = intent?.getStringExtra("EXTRA_NAV_ROUTE")
+
         val startDestination = if (checkUsagePermissionUseCase()) {
             NavRoutes.Home.route
         } else {
@@ -35,9 +41,19 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val isDarkTheme by prefsManager.darkThemeEnabled.collectAsStateWithLifecycle(initialValue = true)
+            val navigateToRoute by targetNavRoute
             TimeLensTheme(darkTheme = isDarkTheme) {
-                AppNavHost(startDestination = startDestination)
+                AppNavHost(
+                    startDestination = startDestination,
+                    navigateToRoute = navigateToRoute
+                )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        targetNavRoute.value = intent.getStringExtra("EXTRA_NAV_ROUTE")
     }
 }

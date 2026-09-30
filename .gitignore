@@ -6,6 +6,7 @@ build/
 local.properties
 
 # Kotlin
+.kotlin/
 *.class
 *.jar
 *.war
