@@ -44,10 +44,16 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun TimeLensTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: com.timelens.app.domain.model.ThemeMode = com.timelens.app.domain.model.ThemeMode.SYSTEM,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        com.timelens.app.domain.model.ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        com.timelens.app.domain.model.ThemeMode.DARK -> true
+        com.timelens.app.domain.model.ThemeMode.LIGHT -> false
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
@@ -62,4 +68,14 @@ fun TimeLensTheme(
         typography = Typography,
         content = content
     )
+}
+
+@Composable
+fun TimeLensTheme(
+    darkTheme: Boolean,
+    dynamicColor: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    val mode = if (darkTheme) com.timelens.app.domain.model.ThemeMode.DARK else com.timelens.app.domain.model.ThemeMode.LIGHT
+    TimeLensTheme(themeMode = mode, dynamicColor = dynamicColor, content = content)
 }

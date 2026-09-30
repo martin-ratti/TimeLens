@@ -40,9 +40,10 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val isDarkTheme by prefsManager.darkThemeEnabled.collectAsStateWithLifecycle(initialValue = true)
+            val themeMode by prefsManager.themeMode.collectAsStateWithLifecycle(initialValue = com.timelens.app.domain.model.ThemeMode.DARK)
+            val dynamicColor by prefsManager.dynamicColorEnabled.collectAsStateWithLifecycle(initialValue = false)
             val navigateToRoute by targetNavRoute
-            TimeLensTheme(darkTheme = isDarkTheme) {
+            TimeLensTheme(themeMode = themeMode, dynamicColor = dynamicColor) {
                 AppNavHost(
                     startDestination = startDestination,
                     navigateToRoute = navigateToRoute

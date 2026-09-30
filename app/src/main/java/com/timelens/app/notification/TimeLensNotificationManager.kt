@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import com.timelens.app.R
 import com.timelens.app.domain.model.DaySummary
 import com.timelens.app.presentation.MainActivity
+import com.timelens.app.presentation.navigation.NavRoutes
 import com.timelens.app.util.TimeFormatter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -148,6 +149,43 @@ class TimeLensNotificationManager @Inject constructor(
             .build()
 
         notificationManager.notify(NOTIFICATION_ID_LONG_SESSION, notification)
+        return true
+    }
+
+    fun showAppLimitNotification(
+        packageName: String,
+        appName: String,
+        usedMinutes: Int,
+        limitMinutes: Int,
+        isExceeded: Boolean
+    ): Boolean {
+        createNotificationChannels()
+        if (!hasNotificationPermission()) return false
+
+        val title = if (isExceeded) {
+            "⚠️ Límite superado en $appName"
+        } else {
+            "⏳ Te queda poco tiempo en $appName"
+        }
+
+        val content = if (isExceeded) {
+            "Usaste $appName por $usedMinutes min, superando tu límite diario de $limitMinutes min."
+        } else {
+            "Has alcanzado el 80% de tu límite diario ($usedMinutes min de $limitMinutes min) en $appName."
+        }
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(content))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(getMainActivityPendingIntent(NavRoutes.AppDetail.createRoute(packageName)))
+            .build()
+
+        val notificationId = 2000 + (packageName.hashCode() % 1000).let { if (it < 0) -it else it }
+        notificationManager.notify(notificationId, notification)
         return true
     }
 

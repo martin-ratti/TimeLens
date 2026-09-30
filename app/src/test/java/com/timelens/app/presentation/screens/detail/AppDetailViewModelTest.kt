@@ -1,6 +1,8 @@
 package com.timelens.app.presentation.screens.detail
 
 import androidx.lifecycle.SavedStateHandle
+import com.timelens.app.data.local.prefs.UserPreferencesManager
+import com.timelens.app.fakes.FakePreferencesHelper
 import com.timelens.app.fakes.FakeUsageRepository
 import com.timelens.app.fakes.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,10 +19,12 @@ class AppDetailViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var fakeRepository: FakeUsageRepository
+    private lateinit var prefsManager: UserPreferencesManager
 
     @Before
     fun setUp() {
         fakeRepository = FakeUsageRepository()
+        prefsManager = FakePreferencesHelper.createFakeUserPreferencesManager()
     }
 
     @Test
@@ -29,7 +33,8 @@ class AppDetailViewModelTest {
 
         val viewModel = AppDetailViewModel(
             savedStateHandle = savedStateHandle,
-            repository = fakeRepository
+            repository = fakeRepository,
+            prefsManager = prefsManager
         )
 
         assertEquals("com.instagram.android", viewModel.packageName)
@@ -47,12 +52,34 @@ class AppDetailViewModelTest {
 
         val viewModel = AppDetailViewModel(
             savedStateHandle = savedStateHandle,
-            repository = fakeRepository
+            repository = fakeRepository,
+            prefsManager = prefsManager
         )
 
         val state = viewModel.uiState.value
         assertTrue(state is AppDetailUiState.Error)
         val error = state as AppDetailUiState.Error
         assertEquals("Error en repository", error.message)
+    }
+
+    @Test
+    fun `setAppLimit and removeAppLimit update preferences correctly`() = runTest {
+        val savedStateHandle = SavedStateHandle(mapOf("packageName" to "com.instagram.android"))
+
+        val viewModel = AppDetailViewModel(
+            savedStateHandle = savedStateHandle,
+            repository = fakeRepository,
+            prefsManager = prefsManager
+        )
+
+        assertNull(viewModel.appLimitMinutes.value)
+
+        viewModel.setAppLimit(45)
+        assertEquals(45, viewModel.appLimitMinutes.value)
+        assertEquals(45, prefsManager.getAppLimit("com.instagram.android"))
+
+        viewModel.removeAppLimit()
+        assertNull(viewModel.appLimitMinutes.value)
+        assertNull(prefsManager.getAppLimit("com.instagram.android"))
     }
 }

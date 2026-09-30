@@ -44,6 +44,8 @@ fun SettingsScreen(
     val dailyGoal by viewModel.dailyGoalHours.collectAsStateWithLifecycle()
     val notificationsEnabled by viewModel.notificationsEnabled.collectAsStateWithLifecycle()
     val darkThemeEnabled by viewModel.darkThemeEnabled.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val dynamicColorEnabled by viewModel.dynamicColorEnabled.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
 
@@ -308,24 +310,157 @@ fun SettingsScreen(
                 }
             }
 
-            // Tema (Oscuro / Claro)
-            SettingItem(
-                icon = if (darkThemeEnabled) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
-                title = if (darkThemeEnabled) "Modo Oscuro Neón" else "Modo Claro",
-                subtitle = if (darkThemeEnabled) "Diseño oscuro con acentos neón" else "Diseño claro y luminoso",
-                iconTint = NeonGreen,
-                onClick = { viewModel.toggleDarkTheme(!darkThemeEnabled) },
-                action = {
-                    Switch(
-                        checked = darkThemeEnabled,
-                        onCheckedChange = { viewModel.toggleDarkTheme(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = NeonGreen,
-                            checkedTrackColor = NeonGreen.copy(alpha = 0.5f)
+            // Sección de Apariencia y Tema
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = BorderStroke(1.dp, NeonGreen.copy(alpha = 0.2f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(NeonGreen.copy(alpha = 0.15f), RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = when (themeMode) {
+                                    com.timelens.app.domain.model.ThemeMode.SYSTEM -> Icons.Outlined.BrightnessAuto
+                                    com.timelens.app.domain.model.ThemeMode.DARK -> Icons.Outlined.DarkMode
+                                    com.timelens.app.domain.model.ThemeMode.LIGHT -> Icons.Outlined.LightMode
+                                },
+                                contentDescription = null,
+                                tint = NeonGreen,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Column {
+                            Text(
+                                text = "Tema y Apariencia",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = when (themeMode) {
+                                    com.timelens.app.domain.model.ThemeMode.SYSTEM -> "Siguiendo el tema del dispositivo"
+                                    com.timelens.app.domain.model.ThemeMode.DARK -> "Modo oscuro con acentos neón"
+                                    com.timelens.app.domain.model.ThemeMode.LIGHT -> "Modo claro de alta legibilidad"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Selector de 3 modos (Sistema, Oscuro, Claro)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val modes = listOf(
+                            Triple(com.timelens.app.domain.model.ThemeMode.SYSTEM, "Sistema", Icons.Outlined.BrightnessAuto),
+                            Triple(com.timelens.app.domain.model.ThemeMode.DARK, "Oscuro", Icons.Outlined.DarkMode),
+                            Triple(com.timelens.app.domain.model.ThemeMode.LIGHT, "Claro", Icons.Outlined.LightMode)
                         )
-                    )
+
+                        modes.forEach { (mode, label, icon) ->
+                            val isSelected = themeMode == mode
+                            OutlinedButton(
+                                onClick = { viewModel.setThemeMode(mode) },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (isSelected) NeonGreen.copy(alpha = 0.15f) else Color.Transparent
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isSelected) NeonGreen else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                ),
+                                contentPadding = PaddingValues(vertical = 10.dp, horizontal = 4.dp)
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = label,
+                                        tint = if (isSelected) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = label,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) NeonGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Opción Material You en Android 12+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.toggleDynamicColor(!dynamicColorEnabled) },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Palette,
+                                    contentDescription = null,
+                                    tint = NeonCyan,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = "Color Dinámico (Material You)",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Usa la paleta de tu fondo de pantalla",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = dynamicColorEnabled,
+                                onCheckedChange = { viewModel.toggleDynamicColor(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = NeonCyan,
+                                    checkedTrackColor = NeonCyan.copy(alpha = 0.5f)
+                                )
+                            )
+                        }
+                    }
                 }
-            )
+            }
 
             // Compartir TimeLens
             SettingItem(

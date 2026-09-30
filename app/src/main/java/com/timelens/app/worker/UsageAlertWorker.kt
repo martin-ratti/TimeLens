@@ -92,6 +92,40 @@ class UsageAlertWorker(
                 }
             }
 
+            // 4. Alertas de Límites por Aplicación
+            val appLimits = prefsManager.appLimits.value
+            if (appLimits.isNotEmpty()) {
+                val appUsageList = repository.getAppUsageToday()
+                val appUsageMap = appUsageList.associateBy { it.packageName }
+
+                for ((pkg, limitMinutes) in appLimits) {
+                    val appUsage = appUsageMap[pkg] ?: continue
+                    val usedMinutes = (appUsage.totalTimeMs / (60 * 1000L)).toInt()
+                    val limitKey = "app_limit_${pkg}_$todayStr"
+                    val lastAlertLevel = alertPrefs.getInt(limitKey, 0)
+
+                    if (usedMinutes >= limitMinutes && lastAlertLevel < 100) {
+                        notificationManager.showAppLimitNotification(
+                            packageName = pkg,
+                            appName = appUsage.appName,
+                            usedMinutes = usedMinutes,
+                            limitMinutes = limitMinutes,
+                            isExceeded = true
+                        )
+                        alertPrefs.edit().putInt(limitKey, 100).apply()
+                    } else if (usedMinutes >= (limitMinutes * 0.8) && lastAlertLevel < 80) {
+                        notificationManager.showAppLimitNotification(
+                            packageName = pkg,
+                            appName = appUsage.appName,
+                            usedMinutes = usedMinutes,
+                            limitMinutes = limitMinutes,
+                            isExceeded = false
+                        )
+                        alertPrefs.edit().putInt(limitKey, 80).apply()
+                    }
+                }
+            }
+
             Result.success()
         } catch (e: Exception) {
             e.printStackTrace()

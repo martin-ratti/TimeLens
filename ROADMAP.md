@@ -14,7 +14,7 @@
 | Fase 3 — Base de Datos Room | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | Fase 4 — UI con Compose | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | Fase 5 — Notificaciones | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| Fase 6 — Testing y Pulido | 🟢 Casi Completa | ▓▓▓▓▓▓▓▓▓░ 90% |
+| Fase 6 — Testing y Pulido | 🟢 Casi Completa | ▓▓▓▓▓▓▓▓▓▓ 95% |
 | Fase 7 — Publicación | ⬜ Pendiente | ░░░░░░░░░░ 0% |
 
 ---
@@ -182,7 +182,7 @@
 
 🟡 **Prioridad: Alta**
 
-- [x] Tests unitarios completos (65 tests, 100% pasando en SessionCalculator, WellnessReport, TimeFormatter, ViewModels, Repository, Mappers, Preferences)
+- [x] Tests unitarios completos (70 tests, 100% pasando en SessionCalculator, WellnessReport, TimeFormatter, ViewModels, Repository, Mappers, Preferences)
 - [x] Cobertura exhaustiva de lógica de negocio y arquitectura limpia con JUnit 4, Kotlinx Coroutines Test y MockK
 - [x] Corrección de discrepancias en cálculo de tiempo diario y eventos superpuestos
 - [x] Optimización de rendimiento con caché en memoria en `UsageDataSource` y renderizado de ImageBitmap
@@ -190,6 +190,10 @@
 - [x] Unificación estética y responsiva de tarjetas KPI en todas las pantallas
 - [x] Diagnóstico y benchmark de tasa de refresco (60/120 Hz) con `dumpsys gfxinfo`
 - [x] Documentación completa de tests en `TESTING.md`
+- [x] 🌟 Pull-to-Refresh y actualización en tiempo real en HomeScreen
+- [x] 🎯 Límites de tiempo diarios por aplicación (App Limits) con alertas personalizadas
+- [x] 🎨 Selector de tema completo (Sistema / Modo Oscuro / Modo Claro) + Material You
+- [x] 🔒 Onboarding moderno con propuesta de valor de privacidad y detección automática de permisos
 - [ ] Tests de UI básicos con Compose Testing
 - [ ] Probar en múltiples versiones de Android (API 26 a API 35)
 - [ ] Pulir transiciones avanzadas y accesibilidad adicional

@@ -42,6 +42,9 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         loadData()
         viewModelScope.launch {
@@ -52,6 +55,35 @@ class HomeViewModel @Inject constructor(
                     val updatedReport = getWellnessReportUseCase(current.summary, yesterday, newGoal)
                     _uiState.value = current.copy(dailyGoalHours = newGoal, wellnessReport = updatedReport)
                 }
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                if (checkUsagePermissionUseCase()) {
+                    val summary = getDailySummaryUseCase()
+                    val yesterday = repository.getDaySummary(LocalDate.now().minusDays(1))
+                    val goal = prefsManager.dailyGoalHours.value
+                    val comparisonText = if (yesterday != null && yesterday.totalScreenTimeMs > 0) {
+                        TimeFormatter.formatPercentageChange(summary.totalScreenTimeMs, yesterday.totalScreenTimeMs)
+                    } else {
+                        "Meta diaria: ${goal}h"
+                    }
+                    val wellnessReport = getWellnessReportUseCase(summary, yesterday, goal)
+                    _uiState.value = HomeUiState.Success(
+                        summary = summary,
+                        comparisonText = comparisonText,
+                        dailyGoalHours = goal,
+                        wellnessReport = wellnessReport
+                    )
+                }
+            } catch (e: Exception) {
+                // Mantener estado actual si falla el refresh en background
+            } finally {
+                _isRefreshing.value = false
             }
         }
     }

@@ -27,8 +27,13 @@ import com.timelens.app.domain.model.DaySummary
 import com.timelens.app.domain.model.WellnessReport
 import com.timelens.app.presentation.components.*
 import com.timelens.app.presentation.theme.*
-import com.timelens.app.util.TimeFormatter
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.timelens.app.util.TimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +45,8 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
     val currentHour = remember { java.time.LocalTime.now().hour }
     val isNightHour = currentHour >= 21 || currentHour < 5
@@ -164,17 +171,36 @@ fun HomeScreen(
                     )
                 }
                 is HomeUiState.Success -> {
-                    HomeContent(
-                        summary = state.summary,
-                        comparisonText = state.comparisonText,
-                        dailyGoalHours = state.dailyGoalHours,
-                        wellnessReport = state.wellnessReport,
-                        onAppClick = onAppClick,
-                        onNavigateToSummary = {
-                            isNightDebrief = isNightHour
-                            showDebriefSheet = true
+                    val pullRefreshState = rememberPullToRefreshState()
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.refresh()
+                        },
+                        state = pullRefreshState,
+                        modifier = Modifier.fillMaxSize(),
+                        indicator = {
+                            PullToRefreshDefaults.Indicator(
+                                state = pullRefreshState,
+                                isRefreshing = isRefreshing,
+                                modifier = Modifier.align(Alignment.TopCenter),
+                                color = NeonBlue
+                            )
                         }
-                    )
+                    ) {
+                        HomeContent(
+                            summary = state.summary,
+                            comparisonText = state.comparisonText,
+                            dailyGoalHours = state.dailyGoalHours,
+                            wellnessReport = state.wellnessReport,
+                            onAppClick = onAppClick,
+                            onNavigateToSummary = {
+                                isNightDebrief = isNightHour
+                                showDebriefSheet = true
+                            }
+                        )
+                    }
                 }
             }
         }

@@ -11,8 +11,22 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - **Momento más productivo**: Cálculo de la franja horaria diurna (08:00 a 20:00) con menor uso del dispositivo, reconociendo el período de máxima concentración del usuario.
   - **Manejo robusto de límites temporales**: Corte inteligente de sesiones que cruzan la medianoche (clamp a las 00:00:00 del día actual), descarte de sesiones corruptas o anómalas mayores a 12 horas y cierre ordenado ante eventos de apagado del dispositivo (`DEVICE_SHUTDOWN`).
   - **Integración transversal**: Métrica agregada a `DaySummary`, visualizada en la cuadrícula 2x2 de `HomeScreen` con ícono Material `CenterFocusStrong`, reflejada en `DailyDebriefBottomSheet` y evaluada en el motor de recomendaciones.
+- 🌟 **Pull-to-Refresh y Actualización en Tiempo Real en HomeScreen**:
+  - Implementación nativa de `PullToRefreshBox` de Material 3 con indicador `NeonBlue`.
+  - Recálculo inmediato de eventos y métricas de pantalla con feedback háptico (`LocalHapticFeedback`) al deslizar.
+- 🎯 **Límites Diarios de Tiempo por Aplicación (App Limits)**:
+  - Almacenamiento y reactividad de límites por paquete en `UserPreferencesManager`.
+  - Nueva tarjeta interactiva `AppLimitCard` en `AppDetailScreen` con barra de progreso, porcentaje y alerta visual (`NeonRed` si excede, `NeonOrange` al 80%).
+  - Diálogo modal `AppLimitDialog` con selección rápida de duraciones (15m, 30m, 45m, 1h, 1h 30m, 2h, 3h) y opción para eliminar límites.
+  - Alertas preventivas proactivas en `TimeLensNotificationManager` y `UsageAlertWorker` con navegación profunda hacia la app correspondiente.
+- 🎨 **Selector de Tema Completo (Sistema / Modo Oscuro / Modo Claro) + Material You**:
+  - Modelo `ThemeMode` (`SYSTEM`, `DARK`, `LIGHT`) e integración reactiva en `TimeLensTheme` y `MainActivity`.
+  - Tarjeta de Apariencia en Ajustes con 3 botones segmentados estilizados y switch opcional para *Color Dinámico (Material You)* en Android 12+.
+- 🔒 **Onboarding Moderno con Detección Automática de Permisos**:
+  - Rediseño con estética neón y 3 tarjetas de propuesta de valor y privacidad (100% Offline, Cero Rastreo, Batería Eficiente).
+  - Detección automática en tiempo real con `LifecycleResumeEffect` al volver de Configuración del sistema.
 - 🧪 **Suite Integral de Tests Unitarios (~100% de Cobertura de Lógica de Negocio)**:
-  - **65 tests unitarios** implementados y pasando al 100% sin dependencias de emulador.
+  - **70 tests unitarios** implementados y pasando al 100% sin dependencias de emulador.
   - 12 suites cubriendo `SessionCalculator`, `GetWellnessReportUseCase`, `TimeFormatter`, casos de uso de Clean Architecture, modelos de dominio, mapeadores Room/Domain, `UserPreferencesManager`, `HomeViewModel`, `HistoryViewModel`, `AppDetailViewModel`, `SettingsViewModel` y `UsageRepositoryImpl`.
   - Integración de **MockK** (`1.13.12`) y **Kotlinx Coroutines Test** (`1.9.0`) con `MainDispatcherRule` y configuración de Gradle `testOptions.unitTests.isReturnDefaultValues = true`.
   - Documentación técnica detallada en [`TESTING.md`](TESTING.md).

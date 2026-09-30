@@ -107,4 +107,18 @@ class HomeViewModelTest {
         val error = state as HomeUiState.Error
         assertTrue(error.message.contains("Error en repository"))
     }
+
+    @Test
+    fun `refresh updates data and manages isRefreshing state flow`() = runTest {
+        fakeRepository.hasPermission = true
+        val viewModel = createViewModel()
+
+        assertFalse(viewModel.isRefreshing.value)
+
+        viewModel.refresh()
+
+        assertFalse(viewModel.isRefreshing.value)
+        val state = viewModel.uiState.value
+        assertTrue(state is HomeUiState.Success)
+    }
 }
