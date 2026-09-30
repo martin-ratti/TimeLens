@@ -4,6 +4,36 @@ Todos los cambios notables del proyecto se documentan en este archivo.
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.4.0] — 2026-09-30
+
+### Optimizado
+- 🚀 **Rendimiento Extremo en Home y Listas**:
+  - Eliminación de la sobrecarga de Coil durante el scroll: los íconos de aplicaciones ahora se convierten una única vez a `ImageBitmap` en memoria y se renderizan de forma nativa directamente en el canvas de Compose con `Image(bitmap = ...)`.
+  - Supresión de corrutinas y recomposiciones continuas en cada tarjeta: `LinearProgressIndicator` ahora consume `{ progress }` directamente sin disparar ticks de 60/120 Hz por ítem.
+  - Reducción del uso de memoria y recolección de basura en `CircularProgressCard`: memorización de `Brush.sweepGradient` con `remember`, evitando la creación de shaders nativos en cada frame de dibujo.
+- 🔁 **Animaciones Inteligentes y No Repetitivas**:
+  - `CircularProgressCard` utiliza `rememberSaveable`, garantizando que la animación de entrada solo se ejecute al inicio y no se reinicie a cero al scrollear o volver a la parte superior.
+
+### Corregido
+- 🧭 **Navegación de Ajustes desde Home**:
+  - El botón de configuración en la barra superior de Home ahora sincroniza de manera limpia con la barra de navegación inferior (`popUpTo` al destino inicial con `launchSingleTop = true`), evitando pantallas duplicadas o estados rotos en la pila de navegación.
+- 🛡️ **Protección contra divisiones por cero**:
+  - Validación defensiva para evitar valores `NaN` en cálculos de progreso cuando el tiempo total o meta diaria sea 0.
+
+### Agregado
+- 🏷️ **Filtro interactivo por Categorías en Inicio**:
+  - Fila interactiva con chip *"Todas"* y chips por categoría que filtran instantáneamente la lista de aplicaciones más usadas.
+- 📈 **Rediseño Completo de la Pantalla de Tendencias (`HistoryScreen`)**:
+  - Estructura 100% scrolleable con `LazyColumn`.
+  - Tarjetas KPI semanales: Total semanal acumulado, promedio diario y total de desbloqueos.
+  - Tarjetas de destaque para Mejor día (menor uso) y Mayor uso con badges informativos.
+  - Desglose día por día de la semana con barra proporcional, cantidad de desbloqueos y la aplicación más usada de cada jornada.
+- 📊 **Interactividad en Gráficos Nativos**:
+  - `HourlyBarChart`: Toque en cualquier barra para ver la franja horaria y duración exacta.
+  - `WeeklyBarChart`: Toque en cualquier día para ver la fecha completa y tiempo exacto formateado.
+
+---
+
 ## [0.3.0] — 2026-09-26
  
 ### Agregado

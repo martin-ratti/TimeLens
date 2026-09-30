@@ -128,9 +128,11 @@
   - Gráfico de barras por hora para la app seleccionada (24 horas)
   - Historial de uso de esa app (últimos 7 días)
 - [x] **Historial / Trends**
-  - Gráfico de barras semanal con Compose Canvas nativo
-  - Mejor y peor día calculados
-  - Promedio semanal
+  - Gráfico de barras semanal con Compose Canvas nativo e interactividad táctil
+  - Mejor y peor día calculados con badges
+  - Promedio semanal, total acumulado y desbloqueos
+  - Desglose día por día con aplicación líder y barra proporcional
+  - Lista scrolleable completa con `LazyColumn`
 - [x] **Settings**
   - Objetivo diario con selector interactivo
   - Notificaciones on/off
