@@ -43,7 +43,7 @@ app/build/reports/tests/testDebugUnitTest/index.html
 
 ---
 
-## 📊 Resumen de Suites y Cobertura (65 Tests, 100% Aprobados)
+## 📊 Resumen de Suites y Cobertura (66 Tests, 100% Aprobados)
 
 | Suite de Test | Archivo | Tests | Descripción y Casos Cubiertos |
 |:---|:---|:---:|:---|
@@ -58,13 +58,13 @@ app/build/reports/tests/testDebugUnitTest/index.html
 | **HistoryViewModelTest** | `presentation/screens/history/HistoryViewModelTest.kt` | 2 | Pantalla de historial semanal: carga exitosa de la tendencia de 7 días y propagación de estado de error ante fallas. |
 | **AppDetailViewModelTest** | `presentation/screens/detail/AppDetailViewModelTest.kt` | 2 | Pantalla de detalle de app: obtención de métricas mediante `SavedStateHandle` y fallback seguro ante argumentos faltantes. |
 | **SettingsViewModelTest** | `presentation/screens/settings/SettingsViewModelTest.kt` | 9 | Pantalla de configuración: cambio de metas, tema oscuro, gestión de notificaciones (programación y cancelación con `WorkManager` y `UsageMonitorService`), pruebas manuales de notificación, resumen y chequeo de alertas, y generación de `Intent` para compartir. |
-| **UsageRepositoryImplTest** | `data/repository/UsageRepositoryImplTest.kt` | 5 | Repositorio principal: delegación de permisos a `UsageDataSource`, consulta de resúmenes existentes y nulos en Room, guardado de resúmenes diarios e inserción en base de datos. |
+| **UsageRepositoryImplTest** | `data/repository/UsageRepositoryImplTest.kt` | 6 | Repositorio principal: delegación de permisos a `UsageDataSource`, consulta de resúmenes en Room, guardado de resúmenes diarios, purga automática de registros artificiales (`deleteArtificialRecords` / `deleteOrphanedRecords`) y garantía de no inventar días ficticios cuando Android no tiene eventos. |
 
 ---
 
 ## 🛡️ Principios y Patrones Aplicados
 
-1. **Aislamiento Total**: No se requiere emulador ni dispositivo físico para ejecutar esta suite de 65 tests; corren en segundos directamente sobre la JVM local.
+1. **Aislamiento Total**: No se requiere emulador ni dispositivo físico para ejecutar esta suite de 66 tests; corren en segundos directamente sobre la JVM local.
 2. **Determinismo con Corrutinas**: Se evitan retrasos arbitrarios (`delay` / `sleep`); se utiliza `runTest` y `StandardTestDispatcher` para un avance de reloj controlado y seguro.
 3. **Desacoplamiento de Framework**: Se desacopló la lógica de cálculo en `SessionCalculator` utilizando modelos intermedios (`UsageEventModel`), facilitando pruebas sin depender de la clase nativa `UsageEvents.Event`.
 4. **Pruebas de Límites y Casos Extremos**: Se cubren expresamente anomalías reales observadas en Android (apagar el teléfono a mitad de sesión, eventos duplicados de actividad, sesiones maratónicas de más de medio día y cambios de fecha).

@@ -4,6 +4,30 @@ Todos los cambios notables del proyecto se documentan en este archivo.
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [0.6.0] — 2026-09-30
+
+### Agregado
+- 🛡️ **Integridad 100% Real del Historial de Uso (Cero Datos Simulados o Inventados)**:
+  - **Eliminación Total del Backfill Artificial**: Removido por completo el algoritmo `backfillHistoricalDays()` que estimaba desbloqueos con fórmulas aritméticas `(50 + (i * 7) % 35)`, horas pico ficticias `(14 + i) % 24` y duraciones de sesión continua arbitrarias divididas por dos (`totalTimeMs / 2`).
+  - **Sincronización Nativa con `UsageEvents`**: Incorporado `getEventsForRange()` en `UsageDataSource` y `syncRealHistoricalDays()` en `UsageRepositoryImpl` para consultar directamente al kernel/sistema operativo Android los eventos reales y procesarlos con `SessionCalculator.calculateMetrics()`.
+  - **Purga Atómica en Room**: Nuevas consultas `@Query` en `DailyUsageDao` (`deleteArtificialRecords`) y `AppDailyUsageDao` (`deleteOrphanedRecords`) que eliminan automáticamente cualquier registro histórico generado con fórmulas artificiales del pasado o días caducados.
+  - **Transparencia Absoluta**: Si Android no cuenta con eventos para una fecha pasada, la app no inventa días ni métricas; `HistoryScreen` y `AppDetailScreen` se adaptan dinámicamente mostrando con honestidad los días efectivamente registrados (`"1 día registrado"` vs `"X días reg."`).
+- 📊 **Rediseño Enriquecido de `AppDetailScreen` (UX / UI de Alto Impacto)**:
+  - Header con acciones directas del sistema: botón "Abrir app" (`Intent(ACTION_MAIN)`) y botón "Ajustes de app" (`ACTION_APPLICATION_DETAILS_SETTINGS`).
+  - Grid de 6 KPIs enriquecidos: Tiempo hoy con porcentaje sobre el total diario, Aperturas con frecuencia estimada entre usos, Sesión máxima continua, Promedio por sesión, Horario pico de mayor concentración y Tendencia semanal comparativa.
+  - Tarjeta de Bienestar Contextual por aplicación (`AppWellnessInsightCard`) con consejos inteligentes y dinámicos según el tipo y tiempo de consumo.
+  - Gráfico de actividad por hora (24hs) con chip resaltador del horario pico en `NeonCyan`.
+- 🔍 **Auditoría Completa de Datos Hardcodeados**:
+  - Verificación y garantía de que ninguna métrica, recomendación o consejo en `GetWellnessReportUseCase`, `DailyDebriefBottomSheet`, `HomeScreen`, `AppDetailScreen`, `HistoryScreen` y workers de segundo plano contenga valores simulados o fijos en el código.
+
+### Corregido
+- 🐛 **Crash de Coil en Detalle de App**:
+  - Reemplazo de `AsyncImage` por el componente nativo de Compose `Image(bitmap = icon)` en `AppDetailScreen`, solucionando el fallo `IllegalArgumentException: Unsupported type: ImageBitmap`.
+- 🧭 **Comportamiento de Inicio en Barra de Navegación**:
+  - Corrección en `AppNavHost` y `HomeScreen` donde el flag de navegación profunda del diagnóstico (`openDebriefOnHome`) permanecía activo y abría el diálogo accidentalmente al tocar "Inicio".
+- 🎨 **Consistencia Visual Neón**:
+  - Supresión del color dinámico forzado de Material You en favor de la identidad artesanal Cyberpunk Neón con temas Sistema, Oscuro y Claro de alto contraste.
+
 ## [0.5.0] — 2026-09-30
 
 ### Agregado

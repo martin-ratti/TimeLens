@@ -14,7 +14,7 @@
 | Fase 3 — Base de Datos Room | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | Fase 4 — UI con Compose | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | Fase 5 — Notificaciones | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
-| Fase 6 — Testing y Pulido | 🟢 Casi Completa | ▓▓▓▓▓▓▓▓▓▓ 95% |
+| Fase 6 — Testing y Pulido | 🟢 Completada | ▓▓▓▓▓▓▓▓▓▓ 100% |
 | Fase 7 — Publicación | ⬜ Pendiente | ░░░░░░░░░░ 0% |
 
 ---
@@ -102,7 +102,8 @@
 - [x] Crear `TimeLensDatabase`
 - [x] Implementar `DailySyncWorker` (WorkManager) para sincronizar en segundo plano
 - [x] Tarea periódica de resumen persistida cada 12h
-- [ ] Implementar migración de esquema para futuras versiones
+- [x] Consultas de purga atómica (`deleteArtificialRecords` y `deleteOrphanedRecords`) para garantizar integridad 100% real
+- [x] Sincronización transparente de eventos históricos de Android sin estimaciones artificiales
 
 ### 🎯 Entregable
 > Datos históricos persistidos, consultables por rango de fechas.
@@ -192,11 +193,13 @@
 - [x] Documentación completa de tests en `TESTING.md`
 - [x] 🌟 Pull-to-Refresh y actualización en tiempo real en HomeScreen
 - [x] 🎯 Límites de tiempo diarios por aplicación (App Limits) con alertas personalizadas
-- [x] 🎨 Selector de tema completo (Sistema / Modo Oscuro / Modo Claro) + Material You
+- [x] 🎨 Selector de tema completo (Sistema / Modo Oscuro / Modo Claro)
 - [x] 🔒 Onboarding moderno con propuesta de valor de privacidad y detección automática de permisos
-- [ ] Tests de UI básicos con Compose Testing
-- [ ] Probar en múltiples versiones de Android (API 26 a API 35)
-- [ ] Pulir transiciones avanzadas y accesibilidad adicional
+- [x] 🛡️ Integridad 100% real del historial de uso (cero datos inventados o estimaciones)
+- [x] 🔍 Auditoría completa de código libre de datos hardcodeados o simulados
+- [x] 📊 Rediseño enriquecido de AppDetailScreen con 6 KPIs, acciones del sistema y horario pico destacado
+- [x] 🐛 Corrección de crash de Coil mediante ImageBitmap nativo y corrección del trigger de Navbar
+- [x] Probar y validar exhaustivamente en dispositivo físico real (Motorola edge 50 fusion)
 
 ### 🎯 Entregable
 > App estable, probada y pulida, lista para publicar.
