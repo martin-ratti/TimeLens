@@ -248,4 +248,52 @@ class SessionCalculatorTest {
         assertEquals(0L, hourly[12])
         assertEquals(0L, hourly[10])
     }
+
+    @Test
+    fun `calculateMetrics tracks longest session per app in appLongestSessionMap`() {
+        val startTimeMs = 10_000L
+        val events = listOf(
+            UsageEventModel("com.youtube", 1, 20_000L),
+            UsageEventModel("com.youtube", 2, 80_000L), // 60_000ms
+            UsageEventModel("com.instagram", 1, 90_000L),
+            UsageEventModel("com.instagram", 2, 120_000L) // 30_000ms
+        )
+
+        val metrics = SessionCalculator.calculateMetricsFromModels(
+            eventsList = events,
+            startTimeMs = startTimeMs,
+            evalCurrentTime = 130_000L
+        )
+
+        assertEquals(60_000L, metrics.longestSessionMs)
+        assertEquals("com.youtube", metrics.longestSessionAppPackage)
+        assertEquals(60_000L, metrics.appLongestSessionMap["com.youtube"])
+        assertEquals(30_000L, metrics.appLongestSessionMap["com.instagram"])
+    }
+
+    @Test
+    fun `calculateAppHourlyUsage splits session crossing hour boundary`() {
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 11)
+            set(Calendar.MINUTE, 40)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val start1140 = cal.timeInMillis
+        val end1220 = start1140 + (40 * 60 * 1000L)
+
+        val events = listOf(
+            UsageEventModel("com.target.app", 1, start1140),
+            UsageEventModel("com.target.app", 2, end1220)
+        )
+
+        val hourly = SessionCalculator.calculateAppHourlyUsageFromModels(
+            eventsList = events,
+            targetPackage = "com.target.app",
+            evalCurrentTime = end1220 + 60_000L
+        )
+
+        assertEquals(20 * 60 * 1000L, hourly[11])
+        assertEquals(20 * 60 * 1000L, hourly[12])
+    }
 }

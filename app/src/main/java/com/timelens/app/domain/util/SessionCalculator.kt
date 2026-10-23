@@ -17,10 +17,37 @@ data class MetricsResult(
     val productiveHour: Int = 9,
     val totalSessions: Int,
     val appUsageMap: Map<String, Long>,
-    val appSessionCountMap: Map<String, Int>
+    val appSessionCountMap: Map<String, Int>,
+    val appLongestSessionMap: Map<String, Long> = emptyMap(),
+    val longestSessionStartTimeMs: Long = 0L,
+    val longestSessionEndTimeMs: Long = 0L
 )
 
 object SessionCalculator {
+
+    private fun distributeSessionAcrossHours(
+        startMs: Long,
+        endMs: Long,
+        hourMap: MutableMap<Int, Long>,
+        cal: Calendar
+    ) {
+        var cursor = startMs
+        while (cursor < endMs) {
+            cal.timeInMillis = cursor
+            val hour = cal.get(Calendar.HOUR_OF_DAY)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            cal.add(Calendar.HOUR_OF_DAY, 1)
+            val nextHourStart = cal.timeInMillis
+            val segmentEnd = minOf(endMs, nextHourStart)
+            val segmentDuration = (segmentEnd - cursor).coerceAtLeast(0L)
+            if (segmentDuration > 0L) {
+                hourMap[hour] = (hourMap[hour] ?: 0L) + segmentDuration
+            }
+            cursor = if (segmentEnd > cursor) segmentEnd else endMs
+        }
+    }
 
     fun calculateProductiveHour(
         hourUsageMap: Map<Int, Long>,
@@ -40,7 +67,8 @@ object SessionCalculator {
     fun calculateMetrics(
         eventsList: List<UsageEvents.Event>,
         startTimeMs: Long,
-        isEligibleApp: (String) -> Boolean = { true }
+        isEligibleApp: (String) -> Boolean = { true },
+        evalCurrentTime: Long? = null
     ): MetricsResult {
         val models = eventsList.map {
             UsageEventModel(
@@ -49,7 +77,7 @@ object SessionCalculator {
                 timeStamp = it.timeStamp
             )
         }
-        return calculateMetricsFromModels(models, startTimeMs, isEligibleApp)
+        return calculateMetricsFromModels(models, startTimeMs, isEligibleApp, evalCurrentTime)
     }
 
     fun calculateMetricsFromModels(
@@ -61,9 +89,13 @@ object SessionCalculator {
         var unlocks = 0
         var longestSessionMs = 0L
         var longestSessionAppPackage: String? = null
+        var longestSessionStartTimeMs = 0L
+        var longestSessionEndTimeMs = 0L
         val hourUsageMap = mutableMapOf<Int, Long>()
         val appUsageMap = mutableMapOf<String, Long>()
         val appSessionCountMap = mutableMapOf<String, Int>()
+        val appLongestSessionMap = mutableMapOf<String, Long>()
+        val sharedCal = Calendar.getInstance()
 
         var currentApp: String? = null
         var sessionStartTime: Long = 0L
@@ -79,15 +111,16 @@ object SessionCalculator {
 
             appUsageMap[app] = (appUsageMap[app] ?: 0L) + duration
             appSessionCountMap[app] = (appSessionCountMap[app] ?: 0) + 1
+            appLongestSessionMap[app] = maxOf(appLongestSessionMap[app] ?: 0L, duration)
 
             if (duration > longestSessionMs) {
                 longestSessionMs = duration
                 longestSessionAppPackage = app
+                longestSessionStartTimeMs = start
+                longestSessionEndTimeMs = endTime
             }
 
-            val calendar = Calendar.getInstance().apply { timeInMillis = start }
-            val hour = calendar.get(Calendar.HOUR_OF_DAY)
-            hourUsageMap[hour] = (hourUsageMap[hour] ?: 0L) + duration
+            distributeSessionAcrossHours(start, endTime, hourUsageMap, sharedCal)
         }
 
         fun closeCurrentSession(endTime: Long) {
@@ -167,7 +200,10 @@ object SessionCalculator {
             productiveHour = productiveHour,
             totalSessions = totalSessions,
             appUsageMap = appUsageMap,
-            appSessionCountMap = appSessionCountMap
+            appSessionCountMap = appSessionCountMap,
+            appLongestSessionMap = appLongestSessionMap,
+            longestSessionStartTimeMs = longestSessionStartTimeMs,
+            longestSessionEndTimeMs = longestSessionEndTimeMs
         )
     }
 
@@ -191,15 +227,14 @@ object SessionCalculator {
         evalCurrentTime: Long? = null
     ): Map<Int, Long> {
         val hourlyMap = (0..23).associateWith { 0L }.toMutableMap()
+        val sharedCal = Calendar.getInstance()
         var currentApp: String? = null
         var sessionStartTime: Long = 0L
         var pendingPauseTime: Long? = null
 
         fun recordSession(start: Long, duration: Long) {
             if (duration <= 0 || duration > 12 * 60 * 60 * 1000L) return
-            val calendar = Calendar.getInstance().apply { timeInMillis = start }
-            val hour = calendar.get(Calendar.HOUR_OF_DAY)
-            hourlyMap[hour] = (hourlyMap[hour] ?: 0L) + duration
+            distributeSessionAcrossHours(start, start + duration, hourlyMap, sharedCal)
         }
 
         fun closeSession(endTime: Long) {

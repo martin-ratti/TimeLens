@@ -33,4 +33,7 @@ interface AppDailyUsageDao {
 
     @Query("DELETE FROM app_daily_usage WHERE date NOT IN (SELECT date FROM daily_usage)")
     suspend fun deleteOrphanedRecords()
+
+    @Query("DELETE FROM app_daily_usage WHERE id NOT IN (SELECT MAX(id) FROM app_daily_usage GROUP BY date, packageName)")
+    suspend fun deleteDuplicateRecords()
 }

@@ -113,6 +113,7 @@ class UsageRepositoryImplTest {
         repository.saveDaySummary(summary)
 
         coVerify { dailyUsageDao.insertOrUpdate(any()) }
+        coVerify { appDailyUsageDao.deleteByDate("2026-09-30") }
         coVerify { appDailyUsageDao.insertAll(any()) }
     }
 
@@ -164,9 +165,10 @@ class UsageRepositoryImplTest {
 
         repository.getWeeklyTrend()
 
-        // Verify that the artificial and orphaned records were purged
+        // Verify that the artificial, duplicate and orphaned records were purged
         coVerify { dailyUsageDao.deleteArtificialRecords() }
         coVerify { appDailyUsageDao.deleteOrphanedRecords() }
+        coVerify { appDailyUsageDao.deleteDuplicateRecords() }
         coVerify { dailyUsageDao.deleteOlderThan(any()) }
         coVerify { appDailyUsageDao.deleteOlderThan(any()) }
     }
