@@ -98,6 +98,9 @@ dependencies {
     // Image Loading
     implementation(libs.coil.compose)
 
+    // Widgets (Jetpack Glance)
+    implementation(libs.androidx.glance.appwidget)
+
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

@@ -9,6 +9,7 @@ import com.timelens.app.data.local.prefs.UserPreferencesManager
 import com.timelens.app.notification.TimeLensNotificationManager
 import com.timelens.app.worker.DailySyncWorker
 import com.timelens.app.worker.NotificationWorkScheduler
+import com.timelens.app.widget.WidgetUpdateWorker
 import dagger.hilt.android.HiltAndroidApp
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -26,6 +27,7 @@ class TimeLensApp : Application() {
         super.onCreate()
         setupWorkManager()
         setupNotifications()
+        WidgetUpdateWorker.schedulePeriodic(this)
     }
 
     private fun setupWorkManager() {

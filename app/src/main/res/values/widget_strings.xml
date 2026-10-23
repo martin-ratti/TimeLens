@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_ring_label">TimeLens • Anillo</string>
+    <string name="widget_ring_description">Tiempo de pantalla de hoy frente a tu límite diario.</string>
+    <string name="widget_summary_label">TimeLens • Resumen</string>
+    <string name="widget_summary_description">Tiempo de hoy, apps más usadas y desbloqueos.</string>
+</resources>
