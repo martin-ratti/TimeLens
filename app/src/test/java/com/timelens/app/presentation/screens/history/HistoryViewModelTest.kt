@@ -70,4 +70,66 @@ class HistoryViewModelTest {
         assertFalse(viewModel.isRefreshing.value)
         assertTrue(viewModel.uiState.value is HistoryUiState.Success)
     }
+
+    private fun buildDays(count: Int): List<DaySummary> = (1..count).map { i ->
+        DaySummary(
+            date = LocalDate.now().minusDays((count - i).toLong()),
+            totalScreenTimeMs = i * 1800000L,
+            totalUnlocks = 10,
+            topApps = emptyList(),
+            longestSession = null,
+            peakHour = 12,
+            productiveHour = 9,
+            totalSessions = 3
+        )
+    }
+
+    @Test
+    fun `default range is 7 days`() = runTest {
+        fakeRepository.weeklyTrendList.addAll(buildDays(30))
+
+        val viewModel = HistoryViewModel(fakeRepository)
+
+        assertEquals(7, viewModel.rangeDays.value)
+        assertEquals(7, fakeRepository.lastRequestedTrendDays)
+        val success = viewModel.uiState.value as HistoryUiState.Success
+        assertEquals(7, success.weeklyData.size)
+    }
+
+    @Test
+    fun `setRange 14 and 30 reloads data with the wider window`() = runTest {
+        fakeRepository.weeklyTrendList.addAll(buildDays(30))
+        val viewModel = HistoryViewModel(fakeRepository)
+
+        viewModel.setRange(14)
+        assertEquals(14, viewModel.rangeDays.value)
+        assertEquals(14, (viewModel.uiState.value as HistoryUiState.Success).weeklyData.size)
+
+        viewModel.setRange(30)
+        assertEquals(30, viewModel.rangeDays.value)
+        assertEquals(30, (viewModel.uiState.value as HistoryUiState.Success).weeklyData.size)
+    }
+
+    @Test
+    fun `setRange ignores unsupported values`() = runTest {
+        fakeRepository.weeklyTrendList.addAll(buildDays(30))
+        val viewModel = HistoryViewModel(fakeRepository)
+
+        viewModel.setRange(99)
+
+        assertEquals(7, viewModel.rangeDays.value)
+        assertEquals(7, fakeRepository.lastRequestedTrendDays)
+    }
+
+    @Test
+    fun `refresh keeps the selected range`() = runTest {
+        fakeRepository.weeklyTrendList.addAll(buildDays(30))
+        val viewModel = HistoryViewModel(fakeRepository)
+        viewModel.setRange(30)
+
+        viewModel.refresh()
+
+        assertEquals(30, fakeRepository.lastRequestedTrendDays)
+        assertEquals(30, (viewModel.uiState.value as HistoryUiState.Success).weeklyData.size)
+    }
 }

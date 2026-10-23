@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -30,7 +31,8 @@ fun WeeklyBarChart(
     days: List<String>,
     valuesMs: List<Long>,
     modifier: Modifier = Modifier,
-    barColor: Color = NeonPurple
+    barColor: Color = NeonPurple,
+    xLabels: List<String>? = null
 ) {
     if (days.isEmpty() || valuesMs.isEmpty() || days.size != valuesMs.size) {
         Box(modifier = modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
@@ -40,8 +42,16 @@ fun WeeklyBarChart(
     }
 
     val maxMs = remember(valuesMs) { valuesMs.maxOrNull()?.coerceAtLeast(1L) ?: 1L }
-    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+    var selectedIndex by remember(days) { mutableStateOf<Int?>(null) }
     val haptic = LocalHapticFeedback.current
+
+    val dense = days.size > 10
+    val barWidth = if (dense) 6.dp else 26.dp
+    val labelStep = when {
+        days.size > 20 -> 5
+        days.size > 10 -> 2
+        else -> 1
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         val idx = selectedIndex
@@ -114,7 +124,7 @@ fun WeeklyBarChart(
                         ms > 0 -> "${mins}m"
                         else -> ""
                     }
-                    if (topLabel.isNotEmpty()) {
+                    if (!dense && topLabel.isNotEmpty()) {
                         Text(
                             text = topLabel,
                             style = MaterialTheme.typography.labelSmall,
@@ -127,18 +137,19 @@ fun WeeklyBarChart(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .width(26.dp),
+                            .width(barWidth),
                         contentAlignment = Alignment.BottomCenter
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val canvasHeight = size.height
                             val canvasWidth = size.width
+                            val radius = if (dense) 8f else 14f
 
                             drawRoundRect(
                                 color = trackColor,
                                 topLeft = Offset.Zero,
                                 size = Size(canvasWidth, canvasHeight),
-                                cornerRadius = CornerRadius(14f, 14f)
+                                cornerRadius = CornerRadius(radius, radius)
                             )
 
                             val barHeight = (canvasHeight * fraction).coerceAtLeast(if (ms > 0) 8f else 0f)
@@ -147,7 +158,7 @@ fun WeeklyBarChart(
                                     brush = if (isSelected) selectedBrush else normalBrush,
                                     topLeft = Offset(0f, canvasHeight - barHeight),
                                     size = Size(canvasWidth, barHeight),
-                                    cornerRadius = CornerRadius(14f, 14f)
+                                    cornerRadius = CornerRadius(radius, radius)
                                 )
                             }
                         }
@@ -155,11 +166,18 @@ fun WeeklyBarChart(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    val labelText = xLabels?.getOrNull(i) ?: days[i].take(3)
+                    val showLabel = !dense || isSelected || i % labelStep == 0
                     Text(
-                        text = days[i].take(3),
-                        style = MaterialTheme.typography.labelMedium,
+                        text = if (showLabel) labelText else "",
+                        style = if (dense) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
                         color = if (isSelected) NeonBlue else MaterialTheme.colorScheme.onSurface,
-                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier
+                            .wrapContentWidth(Alignment.CenterHorizontally, unbounded = true)
+                            .height(16.dp)
                     )
                 }
             }

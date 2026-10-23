@@ -51,6 +51,14 @@ class FakeUsageRepository : UsageRepository {
         return weeklyTrendList
     }
 
+    var lastRequestedTrendDays: Int? = null
+
+    override suspend fun getTrend(days: Int): List<DaySummary> {
+        if (shouldThrowError) throw RuntimeException("Error en repository")
+        lastRequestedTrendDays = days
+        return weeklyTrendList.takeLast(days)
+    }
+
     override suspend fun getAppDetail(packageName: String): AppDetailInfo {
         if (shouldThrowError) throw RuntimeException("Error en repository")
         return AppDetailInfo(

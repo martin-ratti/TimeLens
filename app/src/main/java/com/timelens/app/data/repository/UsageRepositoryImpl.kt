@@ -40,6 +40,10 @@ class UsageRepositoryImpl @Inject constructor(
 
     private val cacheTtlMs = 15_000L
 
+    private companion object {
+        const val MAX_RETENTION_DAYS = 30
+    }
+
     override suspend fun getTodaySummary(): DaySummary = withContext(Dispatchers.IO) {
         val calendar = java.util.Calendar.getInstance().apply {
             set(java.util.Calendar.HOUR_OF_DAY, 0)
@@ -153,9 +157,12 @@ class UsageRepositoryImpl @Inject constructor(
         entity.toDomain(topApps, dataSource.getAppName(entity.longestSessionApp))
     }
 
-    override suspend fun getWeeklyTrend(): List<DaySummary> = withContext(Dispatchers.IO) {
+    override suspend fun getWeeklyTrend(): List<DaySummary> = getTrend(7)
+
+    override suspend fun getTrend(days: Int): List<DaySummary> = withContext(Dispatchers.IO) {
+        val safeDays = days.coerceIn(1, MAX_RETENTION_DAYS)
         syncRealHistoricalDays()
-        val entities = dailyUsageDao.getLastDays(7)
+        val entities = dailyUsageDao.getLastDays(safeDays)
         entities.map { entity ->
             val appEntities = appDailyUsageDao.getByDate(entity.date).distinctBy { it.packageName }
             val topApps = appEntities.take(5).map { appEntity ->
@@ -174,11 +181,13 @@ class UsageRepositoryImpl @Inject constructor(
         dailyUsageDao.deleteArtificialRecords()
         appDailyUsageDao.deleteOrphanedRecords()
         appDailyUsageDao.deleteDuplicateRecords()
-        val cutoffDate = today.minusDays(7).toString()
+        val cutoffDate = today.minusDays(MAX_RETENTION_DAYS.toLong()).toString()
         dailyUsageDao.deleteOlderThan(cutoffDate)
         appDailyUsageDao.deleteOlderThan(cutoffDate)
 
-        for (i in 1..6) {
+        // Android solo conserva eventos recientes: los días ya pasados sin registro se intentan
+        // recuperar; los que el sistema ya no tiene simplemente no se inventan.
+        for (i in 1 until MAX_RETENTION_DAYS) {
             val date = today.minusDays(i.toLong())
             val dateString = date.toString()
 

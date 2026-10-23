@@ -12,6 +12,7 @@ interface UsageRepository {
     suspend fun getSessions(packageName: String, date: LocalDate): List<Session>
     suspend fun getDaySummary(date: LocalDate): DaySummary?
     suspend fun getWeeklyTrend(): List<DaySummary>
+    suspend fun getTrend(days: Int): List<DaySummary>
     suspend fun getAppDetail(packageName: String): com.timelens.app.domain.model.AppDetailInfo
     suspend fun saveDaySummary(summary: DaySummary)
     fun hasUsagePermission(): Boolean

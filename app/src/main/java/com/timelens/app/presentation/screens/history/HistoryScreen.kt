@@ -39,6 +39,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -88,6 +90,7 @@ fun HistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val rangeDays by viewModel.rangeDays.collectAsStateWithLifecycle()
     val haptic = LocalHapticFeedback.current
 
     Scaffold(
@@ -120,7 +123,7 @@ fun HistoryScreen(
                                 color = NeonPurple
                             )
                             Text(
-                                text = "Evolución de los últimos 7 días",
+                                text = "Evolución de los últimos 7, 14 o 30 días",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -192,7 +195,11 @@ fun HistoryScreen(
                                 Text("No hay datos históricos aún.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         } else {
-                            HistoryContent(data)
+                            HistoryContent(
+                                weeklyData = data,
+                                selectedRangeDays = rangeDays,
+                                onRangeSelected = viewModel::setRange
+                            )
                         }
                     }
                 }
@@ -202,16 +209,30 @@ fun HistoryScreen(
 }
 
 @Composable
-fun HistoryContent(weeklyData: List<DaySummary>) {
+fun HistoryContent(
+    weeklyData: List<DaySummary>,
+    selectedRangeDays: Int = 7,
+    onRangeSelected: (Int) -> Unit = {}
+) {
     val dayFormatter = remember {
         java.time.format.DateTimeFormatter.ofPattern("EEEE", java.util.Locale("es", "ES"))
     }
     val fullDateFormatter = remember {
         java.time.format.DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", java.util.Locale("es", "ES"))
     }
+    val shortDateFormatter = remember {
+        java.time.format.DateTimeFormatter.ofPattern("d/M", java.util.Locale("es", "ES"))
+    }
 
     val days = remember(weeklyData) {
-        weeklyData.map { it.date.format(dayFormatter).replaceFirstChar { char -> char.uppercase() } }
+        weeklyData.map { it.date.format(fullDateFormatter).replaceFirstChar { char -> char.uppercase() } }
+    }
+    val chartLabels = remember(weeklyData) {
+        if (weeklyData.size > 10) {
+            weeklyData.map { it.date.format(shortDateFormatter) }
+        } else {
+            weeklyData.map { it.date.format(dayFormatter).replaceFirstChar { char -> char.uppercase() }.take(3) }
+        }
     }
     val timesMs = remember(weeklyData) {
         weeklyData.map { it.totalScreenTimeMs }
@@ -232,6 +253,38 @@ fun HistoryContent(weeklyData: List<DaySummary>) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp)
     ) {
+        // Selector de rango (7 / 14 / 30 días)
+        item(key = "range_selector") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HistoryViewModel.AVAILABLE_RANGES.forEach { range ->
+                    FilterChip(
+                        selected = selectedRangeDays == range,
+                        onClick = { onRangeSelected(range) },
+                        label = {
+                            Text(
+                                text = "$range días",
+                                fontWeight = if (selectedRangeDays == range) FontWeight.Bold else FontWeight.Medium
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = NeonPurple.copy(alpha = 0.18f),
+                            selectedLabelColor = NeonPurple
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = selectedRangeDays == range,
+                            selectedBorderColor = NeonPurple,
+                            borderColor = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    )
+                }
+            }
+        }
+
         // KPI Summary Cards
         item {
             Row(
@@ -240,7 +293,7 @@ fun HistoryContent(weeklyData: List<DaySummary>) {
             ) {
                 StatCard(
                     icon = Icons.Outlined.DateRange,
-                    title = "Total sem.",
+                    title = "Total",
                     value = TimeFormatter.formatMillisToShort(totalWeeklyMs),
                     subtitle = if (weeklyData.size == 1) "1 día registrado" else "${weeklyData.size} días reg.",
                     accentColor = NeonPurple,
@@ -294,7 +347,8 @@ fun HistoryContent(weeklyData: List<DaySummary>) {
                     WeeklyBarChart(
                         days = days,
                         valuesMs = timesMs,
-                        barColor = NeonPurple
+                        barColor = NeonPurple,
+                        xLabels = chartLabels
                     )
                 }
             }
