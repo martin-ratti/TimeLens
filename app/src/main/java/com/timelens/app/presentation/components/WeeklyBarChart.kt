@@ -45,8 +45,12 @@ fun WeeklyBarChart(
     var selectedIndex by remember(days) { mutableStateOf<Int?>(null) }
     val haptic = LocalHapticFeedback.current
 
-    val dense = days.size > 10
-    val barWidth = if (dense) 6.dp else 26.dp
+    val dense = days.size > 7
+    val barWidth = when {
+        days.size > 14 -> 6.dp
+        dense -> 14.dp
+        else -> 26.dp
+    }
     val labelStep = when {
         days.size > 20 -> 5
         days.size > 10 -> 2

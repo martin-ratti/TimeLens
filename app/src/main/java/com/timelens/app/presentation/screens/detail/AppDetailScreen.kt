@@ -563,10 +563,33 @@ fun AppDetailContent(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     if (detail.weeklyHistory.isNotEmpty()) {
+                        val fullDateFormatter = remember {
+                            java.time.format.DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", java.util.Locale("es", "ES"))
+                        }
+                        val shortDateFormatter = remember {
+                            java.time.format.DateTimeFormatter.ofPattern("d/M", java.util.Locale("es", "ES"))
+                        }
+                        val dayNames = remember(detail.weeklyHistory) {
+                            detail.weeklyHistory.map { (dateStr, _) ->
+                                runCatching {
+                                    java.time.LocalDate.parse(dateStr)
+                                        .format(fullDateFormatter)
+                                        .replaceFirstChar { it.uppercase() }
+                                }.getOrDefault(dateStr)
+                            }
+                        }
+                        val xAxisLabels = remember(detail.weeklyHistory) {
+                            detail.weeklyHistory.map { (dateStr, _) ->
+                                runCatching {
+                                    java.time.LocalDate.parse(dateStr).format(shortDateFormatter)
+                                }.getOrDefault(dateStr.takeLast(5))
+                            }
+                        }
                         WeeklyBarChart(
-                            days = detail.weeklyHistory.map { it.first.takeLast(5) },
+                            days = dayNames,
                             valuesMs = detail.weeklyHistory.map { it.second },
-                            barColor = NeonPurple
+                            barColor = NeonPurple,
+                            xLabels = xAxisLabels
                         )
                     } else {
                         Box(

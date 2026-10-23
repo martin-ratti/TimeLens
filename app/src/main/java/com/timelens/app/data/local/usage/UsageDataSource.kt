@@ -226,6 +226,10 @@ class UsageDataSource @Inject constructor(
         appInfo: android.content.pm.ApplicationInfo,
         packageName: String
     ): AppCategory {
+        val inferred = inferCategoryFromPackage(packageName)
+        if (inferred != AppCategory.OTHER) {
+            return inferred
+        }
         return when (appInfo.category) {
             android.content.pm.ApplicationInfo.CATEGORY_GAME -> AppCategory.GAMING
             android.content.pm.ApplicationInfo.CATEGORY_AUDIO,
@@ -236,7 +240,7 @@ class UsageDataSource @Inject constructor(
             android.content.pm.ApplicationInfo.CATEGORY_PRODUCTIVITY -> AppCategory.PRODUCTIVITY
             android.content.pm.ApplicationInfo.CATEGORY_MAPS,
             android.content.pm.ApplicationInfo.CATEGORY_ACCESSIBILITY -> AppCategory.UTILITY
-            else -> inferCategoryFromPackage(packageName)
+            else -> AppCategory.OTHER
         }
     }
 

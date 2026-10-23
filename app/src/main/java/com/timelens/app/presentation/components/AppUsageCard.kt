@@ -142,12 +142,19 @@ fun AppUsageCard(
                     Spacer(modifier = Modifier.height(2.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
+                        val hasLongestSession = !longestSessionText.isNullOrBlank()
+                        val sessionsLabel = when {
+                            hasLongestSession && category != null -> "$sessionCount ap."
+                            sessionCount == 1 -> "1 apertura"
+                            else -> "$sessionCount aperturas"
+                        }
                         Text(
-                            text = if (sessionCount == 1) "1 apertura" else "$sessionCount aperturas",
+                            text = sessionsLabel,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
                         )
                         if (category != null) {
                             Text(
@@ -161,10 +168,11 @@ fun AppUsageCard(
                                 color = accentColor,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
                         }
-                        if (!longestSessionText.isNullOrBlank()) {
+                        if (hasLongestSession) {
                             Text(
                                 text = "•",
                                 style = MaterialTheme.typography.bodySmall,
@@ -174,7 +182,8 @@ fun AppUsageCard(
                                 text = "Máx $longestSessionText",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }

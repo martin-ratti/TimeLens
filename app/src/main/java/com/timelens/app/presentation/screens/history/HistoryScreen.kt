@@ -228,7 +228,7 @@ fun HistoryContent(
         weeklyData.map { it.date.format(fullDateFormatter).replaceFirstChar { char -> char.uppercase() } }
     }
     val chartLabels = remember(weeklyData) {
-        if (weeklyData.size > 10) {
+        if (weeklyData.size > 7) {
             weeklyData.map { it.date.format(shortDateFormatter) }
         } else {
             weeklyData.map { it.date.format(dayFormatter).replaceFirstChar { char -> char.uppercase() }.take(3) }
