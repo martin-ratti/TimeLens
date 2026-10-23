@@ -6,6 +6,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
@@ -27,14 +28,15 @@ object NotificationWorkScheduler {
         val initialDelay = Duration.between(now, targetTime).toMillis()
 
         val summaryRequest = PeriodicWorkRequestBuilder<DailySummaryWorker>(
-            24, TimeUnit.HOURS
+            24, TimeUnit.HOURS,
+            30, TimeUnit.MINUTES
         )
             .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
             .build()
 
         workManager.enqueueUniquePeriodicWork(
             UNIQUE_WORK_SUMMARY,
-            ExistingPeriodicWorkPolicy.UPDATE,
+            ExistingPeriodicWorkPolicy.KEEP,
             summaryRequest
         )
 
@@ -57,7 +59,9 @@ object NotificationWorkScheduler {
     }
 
     fun triggerImmediateAlertCheck(context: Context) {
-        val request = OneTimeWorkRequestBuilder<UsageAlertWorker>().build()
+        val request = OneTimeWorkRequestBuilder<UsageAlertWorker>()
+            .setInputData(workDataOf("IS_MANUAL_TEST" to true))
+            .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
             "UsageAlertWorker_Immediate",
             ExistingWorkPolicy.REPLACE,
@@ -66,7 +70,9 @@ object NotificationWorkScheduler {
     }
 
     fun triggerImmediateDailySummary(context: Context) {
-        val request = OneTimeWorkRequestBuilder<DailySummaryWorker>().build()
+        val request = OneTimeWorkRequestBuilder<DailySummaryWorker>()
+            .setInputData(workDataOf("IS_MANUAL_TEST" to true))
+            .build()
         WorkManager.getInstance(context).enqueueUniqueWork(
             "DailySummaryWorker_Immediate",
             ExistingWorkPolicy.REPLACE,

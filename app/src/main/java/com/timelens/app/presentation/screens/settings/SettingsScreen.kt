@@ -120,16 +120,16 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Objetivo diario
+            // Límite diario de uso
             SettingItem(
                 icon = Icons.Outlined.Flag,
-                title = "Objetivo diario",
-                subtitle = "Límite: $dailyGoal horas al día",
+                title = "Límite diario de uso",
+                subtitle = "Máximo permitido: $dailyGoal horas al día",
                 iconTint = NeonOrange,
                 onClick = { showGoalDialog = true },
                 action = {
                     Text(
-                        text = "${dailyGoal}h",
+                        text = "Máx ${dailyGoal}h",
                         color = NeonOrange,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium
@@ -412,6 +412,31 @@ fun SettingsScreen(
                 }
             }
 
+            // Exportar datos CSV
+            SettingItem(
+                icon = Icons.Outlined.FileDownload,
+                title = "Exportar datos (CSV)",
+                subtitle = "Descargar o compartir tu historial de uso",
+                iconTint = NeonPurple,
+                onClick = {
+                    viewModel.exportDataCsv(
+                        onSuccess = { chooserIntent ->
+                            context.startActivity(chooserIntent)
+                        },
+                        onEmpty = {
+                            Toast.makeText(context, "Aún no hay historial guardado para exportar", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                },
+                action = {
+                    Icon(
+                        imageVector = Icons.Outlined.ArrowOutward,
+                        contentDescription = "Exportar CSV",
+                        tint = NeonPurple
+                    )
+                }
+            )
+
             // Compartir TimeLens
             SettingItem(
                 icon = Icons.Outlined.Share,
@@ -459,38 +484,38 @@ fun SettingsScreen(
         }
     }
 
-    // Dialog: Seleccionar Objetivo Diario
+    // Dialog: Seleccionar Límite Diario de Uso
     if (showGoalDialog) {
         AlertDialog(
             onDismissRequest = { showGoalDialog = false },
-            title = { Text("Definir objetivo diario", fontWeight = FontWeight.Bold) },
+            title = { Text("Definir límite diario de uso", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Selecciona la cantidad de horas máxima recomendada por día:",
+                        "Seleccioná el límite máximo de horas de pantalla que no querés superar en el día (mantenerte por debajo mejorará tu bienestar):",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    listOf(4, 5, 6, 7, 8, 9).forEach { hours ->
+                    listOf(2, 3, 4, 5, 6, 7, 8, 9).forEach { hours ->
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
                                     viewModel.setDailyGoal(hours)
                                     showGoalDialog = false
-                                    Toast.makeText(context, "Objetivo actualizado a ${hours}h", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Límite diario fijado en máx. ${hours}h", Toast.LENGTH_SHORT).show()
                                 },
                             shape = RoundedCornerShape(12.dp),
                             color = if (hours == dailyGoal) NeonOrange.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "$hours horas",
+                                    text = "Máximo $hours horas",
                                     fontWeight = if (hours == dailyGoal) FontWeight.Bold else FontWeight.Normal,
                                     color = if (hours == dailyGoal) NeonOrange else MaterialTheme.colorScheme.onSurface
                                 )

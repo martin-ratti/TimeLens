@@ -18,7 +18,7 @@ class GetWellnessReportUseCase @Inject constructor() {
         val insights = mutableListOf<WellnessInsight>()
         val goalMs = goalHours * 3600000L
 
-        // 1. Regla de Pantalla vs Objetivo
+        // 1. Regla de Pantalla vs Límite Máximo Diario
         if (goalMs > 0 && summary.totalScreenTimeMs >= goalMs) {
             val overtimeMs = summary.totalScreenTimeMs - goalMs
             val overtimeFormatted = TimeFormatter.formatMillisToShort(overtimeMs)
@@ -30,33 +30,34 @@ class GetWellnessReportUseCase @Inject constructor() {
             insights.add(
                 WellnessInsight(
                     id = "goal_exceeded",
-                    title = "Objetivo diario superado",
-                    message = "Alcanzaste ${TimeFormatter.formatMillisToShort(summary.totalScreenTimeMs)} de uso hoy, superando tu meta por $overtimeFormatted.",
+                    title = "Límite diario de uso superado",
+                    message = "Alcanzaste ${TimeFormatter.formatMillisToShort(summary.totalScreenTimeMs)} de uso hoy, superando tu meta máxima de ${goalHours}h por $overtimeFormatted.",
                     actionTip = action,
                     level = InsightLevel.CRITICAL,
                     category = InsightCategory.SCREEN_TIME
                 )
             )
-        } else if (goalMs > 0 && summary.totalScreenTimeMs in 1L..(goalMs * 0.7).toLong()) {
+        } else if (goalMs > 0 && summary.totalScreenTimeMs in 1L..(goalMs * 0.75).toLong()) {
             val remainingFormatted = TimeFormatter.formatMillisToShort(goalMs - summary.totalScreenTimeMs)
             insights.add(
                 WellnessInsight(
                     id = "goal_healthy",
-                    title = "Excelente autocontrol de pantalla",
-                    message = "Llevás ${TimeFormatter.formatMillisToShort(summary.totalScreenTimeMs)} de uso, con un margen de $remainingFormatted disponibles.",
-                    actionTip = "Mantené este ritmo consciente para no sobrecargar tu atención.",
+                    title = "Uso saludable bajo tu límite",
+                    message = "Llevás ${TimeFormatter.formatMillisToShort(summary.totalScreenTimeMs)} de uso (menor a tu límite de ${goalHours}h, con $remainingFormatted disponibles).",
+                    actionTip = "Mantenerte por debajo del límite diario protege tu enfoque y descanso visual.",
                     level = InsightLevel.EXCELLENT,
                     category = InsightCategory.SCREEN_TIME
                 )
             )
-        } else if (goalMs > 0) {
+        } else if (goalMs > 0 && summary.totalScreenTimeMs > 0L) {
+            val remainingFormatted = TimeFormatter.formatMillisToShort((goalMs - summary.totalScreenTimeMs).coerceAtLeast(0L))
             insights.add(
                 WellnessInsight(
                     id = "goal_moderate",
-                    title = "Ritmo de pantalla moderado",
-                    message = "Estás en ${TimeFormatter.formatMillisToShort(summary.totalScreenTimeMs)} de tu objetivo de ${goalHours}h.",
-                    actionTip = "Pausas breves de 5 minutos cada hora ayudan a despejar la mente y prevenir el cansancio.",
-                    level = InsightLevel.MODERATE,
+                    title = "Acercándote a tu límite diario",
+                    message = "Estás en ${TimeFormatter.formatMillisToShort(summary.totalScreenTimeMs)} sobre un límite máximo de ${goalHours}h (te quedan $remainingFormatted).",
+                    actionTip = "Pausas breves de 5 minutos y reducir el uso pasivo te ayudarán a no superar tu límite de hoy.",
+                    level = InsightLevel.ATTENTION,
                     category = InsightCategory.SCREEN_TIME
                 )
             )
@@ -243,19 +244,20 @@ class GetWellnessReportUseCase @Inject constructor() {
         // 6. Regla Nocturna / Cierre de las 22:00 hs
         if (isNightReview) {
             val formattedScreen = TimeFormatter.formatMillisToShort(summary.totalScreenTimeMs)
-            val nightAction = if (summary.totalScreenTimeMs > goalMs) {
-                "Superaste tu meta diaria; es hora de apagar pantallas, preparar tu espacio de descanso y desconectar."
+            val isExceeded = goalMs > 0 && summary.totalScreenTimeMs >= goalMs
+            val nightAction = if (isExceeded) {
+                "Superaste tu límite diario de ${goalHours}h; es hora de apagar pantallas, preparar tu espacio de descanso y desconectar."
             } else {
-                "¡Gran cierre de jornada! Dejá el teléfono cargando fuera del alcance de la cama para optimizar tu descanso."
+                "¡Cumpliste manteniendo tu uso por debajo del límite de ${goalHours}h! Dejá el teléfono cargando fuera del alcance de la cama para optimizar tu descanso."
             }
             insights.add(
                 0, // Prioridad en revisión nocturna
                 WellnessInsight(
                     id = "night_closing_review",
                     title = "Revisión Nocturna de Cierre (22:00 hs)",
-                    message = "Completaste el día con $formattedScreen de pantalla y ${summary.totalUnlocks} desbloqueos.",
+                    message = "Completaste el día con $formattedScreen de pantalla (límite máx: ${goalHours}h) y ${summary.totalUnlocks} desbloqueos.",
                     actionTip = nightAction,
-                    level = if (summary.totalScreenTimeMs > goalMs) InsightLevel.ATTENTION else InsightLevel.EXCELLENT,
+                    level = if (isExceeded) InsightLevel.CRITICAL else InsightLevel.EXCELLENT,
                     category = InsightCategory.NIGHT_USAGE
                 )
             )
@@ -312,7 +314,12 @@ class GetWellnessReportUseCase @Inject constructor() {
 
         // Cálculo de Score General (0 a 100)
         var score = 100
-        if (goalMs > 0 && summary.totalScreenTimeMs > goalMs) score -= 35
+        if (goalMs > 0 && summary.totalScreenTimeMs >= goalMs) {
+            val extraRatio = ((summary.totalScreenTimeMs - goalMs).toFloat() / goalMs).coerceIn(0f, 1f)
+            score -= (35 + (extraRatio * 15).roundToInt())
+        } else if (goalMs > 0 && summary.totalScreenTimeMs >= (goalMs * 0.8).toLong()) {
+            score -= 12
+        }
         if (summary.totalUnlocks > 65) score -= 20
         else if (summary.totalUnlocks > 40) score -= 10
         if (longest != null && longest.durationMs >= 45 * 60 * 1000L) score -= 20

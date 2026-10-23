@@ -37,14 +37,31 @@ class UsageAlertWorker(
                 return Result.success()
             }
 
+            val isManualTest = inputData.getBoolean("IS_MANUAL_TEST", false)
+            val currentHour = java.time.LocalTime.now().hour
+            // Respetar horario de descanso nocturno (23:00 a 07:59) para no enviar alertas tardías de madrugada
+            if (!isManualTest && (currentHour >= 23 || currentHour < 8)) {
+                return Result.success()
+            }
+
             val repository = entryPoint.repository()
             val notificationManager = entryPoint.notificationManager()
             val summary = repository.getTodaySummary()
 
             val alertPrefs = applicationContext.getSharedPreferences("timelens_alerts_state", Context.MODE_PRIVATE)
             val todayStr = LocalDate.now().toString()
+            val nowMs = System.currentTimeMillis()
 
-            // 1. Alerta de superación de objetivo diario
+            // Reiniciar el estado de alertas de sesión larga al cambiar de día
+            if (alertPrefs.getString("last_long_session_date", null) != todayStr) {
+                alertPrefs.edit()
+                    .putString("last_long_session_date", todayStr)
+                    .putString("last_long_session_app", "")
+                    .putLong("last_long_session_ms", 0L)
+                    .apply()
+            }
+
+            // 1. Alerta de superación de límite diario
             val goalHours = prefsManager.dailyGoalHours.value
             val goalMs = goalHours * 3600000L
             val lastGoalDate = alertPrefs.getString("last_goal_alert_date", null)
@@ -54,9 +71,12 @@ class UsageAlertWorker(
                 alertPrefs.edit().putString("last_goal_alert_date", todayStr).apply()
             }
 
-            // 2. Alerta de sesión prolongada (>= 60 min)
+            // 2. Alerta de sesión prolongada (>= 60 min) — SOLO si la sesión está activa o terminó hace <= 25 min
             val longestSession = summary.longestSession
-            if (longestSession != null && longestSession.durationMs >= 60 * 60 * 1000L) {
+            val isSessionRecent = longestSession != null &&
+                (longestSession.endTimeMs <= 0L || (nowMs - longestSession.endTimeMs) <= 25 * 60 * 1000L)
+
+            if (longestSession != null && isSessionRecent && longestSession.durationMs >= 60 * 60 * 1000L) {
                 val lastAlertedMs = alertPrefs.getLong("last_long_session_ms", 0L)
                 val lastAlertedApp = alertPrefs.getString("last_long_session_app", "")
 
@@ -68,14 +88,15 @@ class UsageAlertWorker(
                     val sessionMinutes = longestSession.durationMs / 60000L
                     notificationManager.showLongSessionNotification(longestSession.appName, sessionMinutes)
                     alertPrefs.edit()
+                        .putString("last_long_session_date", todayStr)
                         .putString("last_long_session_app", longestSession.appName)
                         .putLong("last_long_session_ms", longestSession.durationMs)
                         .apply()
                 }
             }
 
-            // 3. Alerta de nuevo récord de sesión más larga
-            if (longestSession != null && longestSession.durationMs >= 90 * 60 * 1000L) {
+            // 3. Alerta de nuevo récord de sesión más larga (solo si ocurrió recientemente)
+            if (longestSession != null && isSessionRecent && longestSession.durationMs >= 90 * 60 * 1000L) {
                 val lastRecordDate = alertPrefs.getString("last_record_alert_date", null)
                 if (lastRecordDate != todayStr) {
                     val weeklyTrend = repository.getWeeklyTrend()

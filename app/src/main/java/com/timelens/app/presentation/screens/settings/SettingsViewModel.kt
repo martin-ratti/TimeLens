@@ -3,14 +3,17 @@ package com.timelens.app.presentation.screens.settings
 import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.timelens.app.data.local.db.dao.DailyUsageDao
 import com.timelens.app.data.local.prefs.UserPreferencesManager
 import com.timelens.app.notification.TimeLensNotificationManager
 import com.timelens.app.service.UsageMonitorService
+import com.timelens.app.util.TimeFormatter
 import com.timelens.app.worker.NotificationWorkScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -84,5 +87,35 @@ class SettingsViewModel @Inject constructor(
         }
 
         onSuccess(chooser)
+    }
+
+    fun exportDataCsv(onSuccess: (Intent) -> Unit, onEmpty: () -> Unit = {}) {
+        viewModelScope.launch {
+            val days = dailyUsageDao.getLastDays(30).sortedBy { it.date }
+            if (days.isEmpty()) {
+                onEmpty()
+                return@launch
+            }
+            val csvContent = buildString {
+                appendLine("Fecha,TiempoTotalMinutos,TiempoFormateado,Desbloqueos,SesionesTotales,HoraPico,AppPrincipal,SesionMasLargaMinutos")
+                for (day in days) {
+                    val totalMin = day.totalScreenTimeMs / 60000L
+                    val formatted = TimeFormatter.formatMillisToShort(day.totalScreenTimeMs)
+                    val longestMin = day.longestSessionMs / 60000L
+                    appendLine("${day.date},$totalMin,$formatted,${day.totalUnlocks},${day.totalSessions},${day.peakHour}:00,${day.topAppPackage},$longestMin")
+                }
+            }
+            val sendIntent = Intent().apply {
+                action = Intent.ACTION_SEND
+                putExtra(Intent.EXTRA_SUBJECT, "TimeLens - Historial de Uso (CSV)")
+                putExtra(Intent.EXTRA_TEXT, csvContent)
+                type = "text/csv"
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            val chooser = Intent.createChooser(sendIntent, "Exportar datos CSV").apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            onSuccess(chooser)
+        }
     }
 }

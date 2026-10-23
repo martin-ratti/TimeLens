@@ -39,6 +39,21 @@ class DailySummaryWorker(
                 return Result.success()
             }
 
+            val isManualTest = inputData.getBoolean("IS_MANUAL_TEST", false)
+            val currentHour = java.time.LocalTime.now().hour
+            val alertPrefs = applicationContext.getSharedPreferences("timelens_alerts_state", Context.MODE_PRIVATE)
+            val todayStr = LocalDate.now().toString()
+
+            // Evitar que WorkManager dispare el resumen nocturno fuera de horario (ej. a la mañana siguiente tras Doze)
+            if (!isManualTest) {
+                if (currentHour !in 21..23) {
+                    return Result.success()
+                }
+                if (alertPrefs.getString("last_daily_summary_date", null) == todayStr) {
+                    return Result.success()
+                }
+            }
+
             val repository = entryPoint.repository()
             val notificationManager = entryPoint.notificationManager()
             val wellnessUseCase = entryPoint.wellnessReportUseCase()
@@ -50,16 +65,19 @@ class DailySummaryWorker(
             val comparisonText = if (yesterday != null && yesterday.totalScreenTimeMs > 0) {
                 TimeFormatter.formatPercentageChange(summary.totalScreenTimeMs, yesterday.totalScreenTimeMs)
             } else {
-                "Meta: ${goal}h"
+                "Límite: ${goal}h"
             }
 
             val report = wellnessUseCase(summary, yesterday, goal, isNightReview = true)
 
-            notificationManager.showDailySummaryNotification(
+            val shown = notificationManager.showDailySummaryNotification(
                 summary = summary,
                 comparisonText = comparisonText,
                 insight = report.primaryInsight
             )
+            if (shown && !isManualTest) {
+                alertPrefs.edit().putString("last_daily_summary_date", todayStr).apply()
+            }
 
             Result.success()
         } catch (e: Exception) {

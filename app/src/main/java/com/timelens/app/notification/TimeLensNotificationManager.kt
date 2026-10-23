@@ -113,11 +113,11 @@ class TimeLensNotificationManager @Inject constructor(
         }
 
         val formattedTime = TimeFormatter.formatMillisToShort(usedMillis)
-        val content = "Alcanzaste $formattedTime de pantalla hoy ($goalHours h de límite). ¡Un momento ideal para desconectar y descansar la vista!"
+        val content = "Superaste tu límite máximo de ${goalHours}h (llevás $formattedTime de pantalla hoy). Es un buen momento para desconectar y descansar la vista."
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ALERTS_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("🎯 ¡Objetivo diario alcanzado!")
+            .setContentTitle("⚠️ Límite diario de uso superado")
             .setContentText(content)
             .setStyle(NotificationCompat.BigTextStyle().bigText(content))
             .setPriority(NotificationCompat.PRIORITY_HIGH)

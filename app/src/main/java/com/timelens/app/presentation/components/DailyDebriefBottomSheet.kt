@@ -234,11 +234,18 @@ fun DailyDebriefBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                val goalMs = dailyGoalHours * 3600000L
+                val isExceeded = goalMs > 0L && summary.totalScreenTimeMs >= goalMs
+                val limitStatusText = if (isExceeded) {
+                    "Superaste tu límite de ${dailyGoalHours}h (+${TimeFormatter.formatMillisToShort(summary.totalScreenTimeMs - goalMs)})"
+                } else {
+                    "Dentro de tu límite máximo de ${dailyGoalHours}h ($comparisonText)"
+                }
                 HabitHighlightItem(
-                    icon = Icons.Outlined.Timer,
-                    iconTint = NeonBlue,
+                    icon = if (isExceeded) Icons.Outlined.WarningAmber else Icons.Outlined.Timer,
+                    iconTint = if (isExceeded) NeonRed else NeonGreen,
                     title = "Tiempo total: ${TimeFormatter.formatMillisToShort(summary.totalScreenTimeMs)}",
-                    subtitle = "$comparisonText • Objetivo: ${dailyGoalHours}h"
+                    subtitle = limitStatusText
                 )
 
                 HabitHighlightItem(

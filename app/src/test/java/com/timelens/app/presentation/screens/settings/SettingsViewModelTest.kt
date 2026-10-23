@@ -136,4 +136,17 @@ class SettingsViewModelTest {
         assertEquals(mockChooser, capturedIntent)
         unmockkStatic(Intent::class)
     }
+
+    @Test
+    fun `exportDataCsv calls onEmpty when database has no records`() {
+        coEvery { dailyUsageDao.getLastDays(30) } returns emptyList()
+
+        var emptyCalled = false
+        viewModel.exportDataCsv(
+            onSuccess = {},
+            onEmpty = { emptyCalled = true }
+        )
+
+        assertTrue(emptyCalled)
+    }
 }
