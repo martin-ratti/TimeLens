@@ -1,5 +1,6 @@
 package com.timelens.app.domain.model
 
+import androidx.compose.runtime.Immutable
 import java.time.LocalDate
 
 enum class InsightLevel {
@@ -17,6 +18,7 @@ enum class InsightCategory {
     APP_BALANCE
 }
 
+@Immutable
 data class WellnessInsight(
     val id: String,
     val title: String,
@@ -26,6 +28,7 @@ data class WellnessInsight(
     val category: InsightCategory
 )
 
+@Immutable
 data class WellnessReport(
     val date: LocalDate,
     val overallScore: Int,

@@ -3,11 +3,15 @@ package com.timelens.app.presentation.components
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.HourglassTop
 import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,6 +28,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.timelens.app.presentation.theme.*
+import com.timelens.app.util.TimeFormatter
 
 @Composable
 fun CircularProgressCard(
@@ -31,27 +36,40 @@ fun CircularProgressCard(
     progress: Float, // 0f to 1f
     comparisonText: String,
     goalHours: Int = 6,
+    usedMillis: Long = (progress * goalHours * 3600000L).toLong(),
     modifier: Modifier = Modifier
 ) {
-    var animationPlayed by rememberSaveable { mutableStateOf(false) }
-    val animatedProgress by animateFloatAsState(
-        targetValue = if (animationPlayed) progress else 0f,
-        animationSpec = tween(
-            durationMillis = 1000,
-            delayMillis = 150,
-            easing = FastOutSlowInEasing
-        ),
-        label = "progress"
-    )
+    val goalMs = goalHours * 3600000L
+    val rawRatio = if (goalMs > 0L) usedMillis.toFloat() / goalMs else progress
+    val isExceeded = goalMs > 0L && usedMillis >= goalMs
+    val isNearLimit = !isExceeded && rawRatio >= 0.8f
 
-    LaunchedEffect(Unit) {
-        animationPlayed = true
+    val statusColor = when {
+        isExceeded -> NeonRed
+        isNearLimit -> NeonOrange
+        else -> NeonGreen
     }
+
+    val timeTextColor = when {
+        isExceeded -> NeonRed
+        isNearLimit -> NeonOrange
+        else -> NeonBlue
+    }
+
+    val clampedProgress = progress.coerceIn(0f, 1f)
 
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        border = BorderStroke(
+            width = 1.dp,
+            color = when {
+                isExceeded -> NeonRed.copy(alpha = 0.45f)
+                isNearLimit -> NeonOrange.copy(alpha = 0.35f)
+                else -> NeonBlue.copy(alpha = 0.22f)
+            }
+        )
     ) {
         Column(
             modifier = Modifier
@@ -67,29 +85,34 @@ fun CircularProgressCard(
                 Icon(
                     imageVector = Icons.Outlined.PhoneAndroid,
                     contentDescription = null,
-                    tint = NeonBlue,
+                    tint = timeTextColor,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Tiempo de pantalla hoy",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                 )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
             val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-            val gradientBrush = remember {
-                Brush.sweepGradient(listOf(NeonBlue, NeonPurple, NeonBlue))
+            val gradientBrush = remember(isExceeded, isNearLimit) {
+                when {
+                    isExceeded -> Brush.sweepGradient(listOf(NeonOrange, NeonRed, NeonRed, NeonOrange))
+                    isNearLimit -> Brush.sweepGradient(listOf(NeonBlue, NeonOrange, NeonRed, NeonBlue))
+                    else -> Brush.sweepGradient(listOf(NeonCyan, NeonBlue, NeonPurple, NeonCyan))
+                }
             }
 
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(200.dp)
+                modifier = Modifier.size(204.dp)
             ) {
-                Canvas(modifier = Modifier.size(200.dp)) {
+                Canvas(modifier = Modifier.size(204.dp)) {
                     val strokeWidth = 16.dp.toPx()
                     val arcSize = Size(
                         size.width - strokeWidth,
@@ -112,7 +135,7 @@ fun CircularProgressCard(
                     drawArc(
                         brush = gradientBrush,
                         startAngle = -90f,
-                        sweepAngle = animatedProgress * 360f,
+                        sweepAngle = clampedProgress * 360f,
                         useCenter = false,
                         topLeft = topLeft,
                         size = arcSize,
@@ -124,25 +147,89 @@ fun CircularProgressCard(
                     Text(
                         text = totalTimeText,
                         fontSize = 36.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = NeonBlue
+                        fontWeight = FontWeight.ExtraBold,
+                        color = timeTextColor
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "de ${goalHours}h objetivo",
+                        text = "Límite máx: ${goalHours}h",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    val percentUsed = (rawRatio * 100).toInt()
+                    Text(
+                        text = "$percentUsed% del límite",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = statusColor.copy(alpha = 0.9f),
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Text(
-                text = comparisonText,
-                style = MaterialTheme.typography.bodyLarge,
-                color = NeonGreen,
-                textAlign = TextAlign.Center
-            )
+            // Badge de estado frente al límite diario (menor al límite = positivo, superarlo = alerta)
+            val statusIcon = when {
+                isExceeded -> Icons.Outlined.WarningAmber
+                isNearLimit -> Icons.Outlined.HourglassTop
+                else -> Icons.Outlined.CheckCircle
+            }
+            val statusLabel = when {
+                isExceeded -> {
+                    val extraText = TimeFormatter.formatMillisToShort((usedMillis - goalMs).coerceAtLeast(0L))
+                    "Límite diario superado (+$extraText)"
+                }
+                isNearLimit -> {
+                    val remText = TimeFormatter.formatMillisToShort((goalMs - usedMillis).coerceAtLeast(0L))
+                    "Cerca del límite • Quedan $remText"
+                }
+                else -> {
+                    val remText = TimeFormatter.formatMillisToShort((goalMs - usedMillis).coerceAtLeast(0L))
+                    "Dentro del límite • $remText disponibles"
+                }
+            }
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = statusColor.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, statusColor.copy(alpha = 0.35f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = statusIcon,
+                        contentDescription = null,
+                        tint = statusColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = statusLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor
+                    )
+                }
+            }
+
+            if (comparisonText.isNotBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                val comparisonColor = when {
+                    comparisonText.startsWith("-") -> NeonGreen
+                    comparisonText.startsWith("+") -> NeonOrange
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                Text(
+                    text = comparisonText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = comparisonColor,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }

@@ -1,7 +1,9 @@
 package com.timelens.app.domain.model
 
+import androidx.compose.runtime.Immutable
 import java.time.LocalDate
 
+@Immutable
 data class DaySummary(
     val date: LocalDate,
     val totalScreenTimeMs: Long,

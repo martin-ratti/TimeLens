@@ -1,7 +1,8 @@
 package com.timelens.app.domain.model
 
-import android.graphics.drawable.Drawable
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class AppUsageInfo(
     val packageName: String,
     val appName: String,
@@ -23,6 +24,7 @@ enum class AppCategory(val displayName: String) {
     OTHER("Otros")
 }
 
+@Immutable
 data class AppDetailInfo(
     val packageName: String,
     val appName: String,

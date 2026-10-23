@@ -1,5 +1,8 @@
 package com.timelens.app.domain.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class Session(
     val packageName: String,
     val appName: String = "",

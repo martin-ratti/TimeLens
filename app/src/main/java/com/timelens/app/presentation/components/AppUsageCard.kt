@@ -1,6 +1,9 @@
 package com.timelens.app.presentation.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -17,11 +20,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.timelens.app.domain.model.AppCategory
 import com.timelens.app.presentation.theme.*
+
+private val CardShape = RoundedCornerShape(18.dp)
+private val IconBoxShape = RoundedCornerShape(14.dp)
+private val ProgressShape = RoundedCornerShape(3.dp)
 
 @Composable
 fun AppUsageCard(
@@ -32,15 +41,25 @@ fun AppUsageCard(
     accentColor: Color,
     sessionCount: Int,
     category: AppCategory? = null,
+    rank: Int? = null,
+    longestSessionText: String? = null,
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val clampedProgress = progress.coerceIn(0f, 1f)
+    val isTopThree = rank != null && rank in 1..3
+    val outlineVariant = MaterialTheme.colorScheme.outlineVariant
+    val borderColor = remember(isTopThree, accentColor, outlineVariant) {
+        if (isTopThree) accentColor.copy(alpha = 0.28f) else outlineVariant.copy(alpha = 0.6f)
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        shape = CardShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Column(
             modifier = Modifier
@@ -51,24 +70,27 @@ fun AppUsageCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    modifier = Modifier.size(48.dp),
-                    shape = CircleShape,
-                    color = accentColor.copy(alpha = 0.15f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(IconBoxShape)
+                            .background(accentColor.copy(alpha = 0.14f))
+                            .border(1.dp, accentColor.copy(alpha = 0.25f), IconBoxShape),
+                        contentAlignment = Alignment.Center
+                    ) {
                         when (icon) {
                             is ImageBitmap -> {
                                 Image(
                                     bitmap = icon,
-                                    contentDescription = "Logo de $appName",
+                                    contentDescription = null,
                                     modifier = Modifier.size(28.dp)
                                 )
                             }
                             is ImageVector -> {
                                 Icon(
                                     imageVector = icon,
-                                    contentDescription = "Icono de $appName",
+                                    contentDescription = null,
                                     tint = accentColor,
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -76,47 +98,89 @@ fun AppUsageCard(
                             else -> {
                                 AsyncImage(
                                     model = icon,
-                                    contentDescription = "Logo de $appName",
+                                    contentDescription = null,
                                     modifier = Modifier.size(28.dp)
                                 )
                             }
                         }
                     }
+
+                    if (isTopThree) {
+                        val badgeColor = when (rank) {
+                            1 -> NeonOrange
+                            2 -> NeonBlue
+                            else -> NeonPurple
+                        }
+                        Box(
+                            modifier = Modifier
+                                .offset(x = 4.dp, y = 4.dp)
+                                .size(20.dp)
+                                .background(badgeColor, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "#$rank",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = DarkBackground
+                            )
+                        }
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = appName,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "$sessionCount aperturas",
+                            text = if (sessionCount == 1) "1 apertura" else "$sessionCount aperturas",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (category != null) {
                             Text(
                                 text = "•",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = category.displayName,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = NeonPurple,
-                                fontWeight = FontWeight.Medium
+                                color = accentColor,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        if (!longestSessionText.isNullOrBlank()) {
+                            Text(
+                                text = "•",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Máx $longestSessionText",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
                             )
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
@@ -125,10 +189,10 @@ fun AppUsageCard(
                         fontWeight = FontWeight.Bold,
                         color = accentColor
                     )
-                    val share = (progress * 100).toInt()
+                    val share = (clampedProgress * 100).toInt()
                     if (share > 0) {
                         Text(
-                            text = "$share%",
+                            text = "$share% del día",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -139,23 +203,29 @@ fun AppUsageCard(
 
                 Icon(
                     imageVector = Icons.Outlined.ChevronRight,
-                    contentDescription = "Ver detalle",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.size(18.dp)
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            LinearProgressIndicator(
-                progress = { progress },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
-                color = accentColor,
-                trackColor = accentColor.copy(alpha = 0.1f)
-            )
+                    .background(accentColor.copy(alpha = 0.12f), ProgressShape)
+            ) {
+                if (clampedProgress > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(clampedProgress)
+                            .fillMaxHeight()
+                            .background(accentColor, ProgressShape)
+                    )
+                }
+            }
         }
     }
 }
@@ -170,7 +240,9 @@ fun AppUsageCardPreview() {
             usageTime = "1h 45m",
             progress = 0.8f,
             accentColor = NeonPurple,
-            sessionCount = 23
+            sessionCount = 23,
+            rank = 1,
+            longestSessionText = "32m"
         )
     }
 }

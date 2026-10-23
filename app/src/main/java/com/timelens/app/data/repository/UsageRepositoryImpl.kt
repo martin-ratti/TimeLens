@@ -26,6 +26,20 @@ class UsageRepositoryImpl @Inject constructor(
     private val appDailyUsageDao: AppDailyUsageDao
 ) : UsageRepository {
 
+    @Volatile
+    private var lastHistoricalSyncDate: LocalDate? = null
+
+    @Volatile
+    private var cachedTodayEvents: List<android.app.usage.UsageEvents.Event>? = null
+
+    @Volatile
+    private var cachedTodayMetrics: com.timelens.app.domain.util.MetricsResult? = null
+
+    @Volatile
+    private var cachedTodayFetchMs: Long = 0L
+
+    private val cacheTtlMs = 15_000L
+
     override suspend fun getTodaySummary(): DaySummary = withContext(Dispatchers.IO) {
         val calendar = java.util.Calendar.getInstance().apply {
             set(java.util.Calendar.HOUR_OF_DAY, 0)
@@ -40,34 +54,37 @@ class UsageRepositoryImpl @Inject constructor(
             isEligibleApp = { dataSource.isAppEligibleForStats(it) }
         )
 
-        val apps = metrics.appUsageMap.map { (packageName, totalTimeMs) ->
+        cachedTodayEvents = events
+        cachedTodayMetrics = metrics
+        cachedTodayFetchMs = System.currentTimeMillis()
+
+        val validEntries = metrics.appUsageMap.entries
+            .filter { it.value > 0L }
+            .sortedByDescending { it.value }
+
+        val totalTime = validEntries.sumOf { it.value }
+        // Only query PackageManager and decode icons for the top 25 apps!
+        val topApps = validEntries.take(25).map { (packageName, totalTimeMs) ->
             AppUsageInfo(
                 packageName = packageName,
                 appName = dataSource.getAppName(packageName),
-                icon = null, // Defer icon loading to avoid heavy Binder transactions
+                icon = dataSource.getAppIconBitmap(packageName),
                 totalTimeMs = totalTimeMs,
                 sessionCount = metrics.appSessionCountMap[packageName] ?: 0,
-                longestSessionMs = if (metrics.longestSessionAppPackage == packageName) metrics.longestSessionMs else 0L,
+                longestSessionMs = metrics.appLongestSessionMap[packageName] ?: 0L,
                 category = dataSource.getAppCategory(packageName)
             )
-        }.filter { it.totalTimeMs > 0 }
-         .sortedByDescending { it.totalTimeMs }
-
-        val totalTime = apps.sumOf { it.totalTimeMs }
-        // Only decode and load icons for the apps that will actually be shown!
-        val topApps = apps.take(25).map { app ->
-            app.copy(icon = dataSource.getAppIconBitmap(app.packageName))
         }
 
-        val longestSessionAppInfo = apps.find { it.packageName == metrics.longestSessionAppPackage }
+        val longestSessionAppInfo = topApps.find { it.packageName == metrics.longestSessionAppPackage }
 
         val longestSession = if (metrics.longestSessionAppPackage != null && metrics.longestSessionMs > 0) {
             Session(
                 packageName = metrics.longestSessionAppPackage,
                 appName = longestSessionAppInfo?.appName ?: dataSource.getAppName(metrics.longestSessionAppPackage),
                 durationMs = metrics.longestSessionMs,
-                startTimeMs = 0L,
-                endTimeMs = 0L
+                startTimeMs = metrics.longestSessionStartTimeMs,
+                endTimeMs = metrics.longestSessionEndTimeMs
             )
         } else null
 
@@ -109,7 +126,7 @@ class UsageRepositoryImpl @Inject constructor(
                 icon = dataSource.getAppIconBitmap(packageName),
                 totalTimeMs = totalTimeMs,
                 sessionCount = metrics.appSessionCountMap[packageName] ?: 0,
-                longestSessionMs = if (metrics.longestSessionAppPackage == packageName) metrics.longestSessionMs else 0L,
+                longestSessionMs = metrics.appLongestSessionMap[packageName] ?: 0L,
                 category = dataSource.getAppCategory(packageName)
             )
         }.filter { it.totalTimeMs > 0 }
@@ -127,7 +144,7 @@ class UsageRepositoryImpl @Inject constructor(
     override suspend fun getDaySummary(date: LocalDate): DaySummary? = withContext(Dispatchers.IO) {
         val dateString = date.toString()
         val entity = dailyUsageDao.getByDate(dateString) ?: return@withContext null
-        val appEntities = appDailyUsageDao.getByDate(dateString)
+        val appEntities = appDailyUsageDao.getByDate(dateString).distinctBy { it.packageName }
 
         val topApps = appEntities.take(5).map {
             it.toDomain(dataSource.getAppIconBitmap(it.packageName))
@@ -139,14 +156,24 @@ class UsageRepositoryImpl @Inject constructor(
     override suspend fun getWeeklyTrend(): List<DaySummary> = withContext(Dispatchers.IO) {
         syncRealHistoricalDays()
         val entities = dailyUsageDao.getLastDays(7)
-        entities.mapNotNull { getDaySummary(LocalDate.parse(it.date)) }.sortedBy { it.date }
+        entities.map { entity ->
+            val appEntities = appDailyUsageDao.getByDate(entity.date).distinctBy { it.packageName }
+            val topApps = appEntities.take(5).map { appEntity ->
+                appEntity.toDomain(icon = null)
+            }
+            entity.toDomain(topApps, dataSource.getAppName(entity.longestSessionApp))
+        }.sortedBy { it.date }
     }
 
     private suspend fun syncRealHistoricalDays() {
         val today = LocalDate.now()
-        // Purgar inmediatamente cualquier residuo artificial y registros desactualizados
+        if (lastHistoricalSyncDate == today) return
+        lastHistoricalSyncDate = today
+
+        // Purgar inmediatamente cualquier residuo artificial, duplicado y registros desactualizados
         dailyUsageDao.deleteArtificialRecords()
         appDailyUsageDao.deleteOrphanedRecords()
+        appDailyUsageDao.deleteDuplicateRecords()
         val cutoffDate = today.minusDays(7).toString()
         dailyUsageDao.deleteOlderThan(cutoffDate)
         appDailyUsageDao.deleteOlderThan(cutoffDate)
@@ -176,26 +203,29 @@ class UsageRepositoryImpl @Inject constructor(
                 val metrics = SessionCalculator.calculateMetrics(
                     eventsList = events,
                     startTimeMs = startMs,
-                    isEligibleApp = { dataSource.isAppEligibleForStats(it) }
+                    isEligibleApp = { dataSource.isAppEligibleForStats(it) },
+                    evalCurrentTime = endMs
                 )
 
-                val apps = metrics.appUsageMap.map { (packageName, totalTimeMs) ->
-                    AppUsageInfo(
-                        packageName = packageName,
-                        appName = dataSource.getAppName(packageName),
-                        icon = null,
-                        totalTimeMs = totalTimeMs,
-                        sessionCount = metrics.appSessionCountMap[packageName] ?: 0,
-                        longestSessionMs = if (metrics.longestSessionAppPackage == packageName) metrics.longestSessionMs else 0L,
-                        category = dataSource.getAppCategory(packageName)
-                    )
-                }.filter { it.totalTimeMs > 0 }
-                 .sortedByDescending { it.totalTimeMs }
+                val validEntries = metrics.appUsageMap.entries
+                    .filter { it.value > 0L }
+                    .sortedByDescending { it.value }
 
-                val totalTime = apps.sumOf { it.totalTimeMs }
+                val totalTime = validEntries.sumOf { it.value }
 
                 if (totalTime > 0) {
-                    val longestSessionAppInfo = apps.find { it.packageName == metrics.longestSessionAppPackage }
+                    val topApps = validEntries.take(25).map { (packageName, totalTimeMs) ->
+                        AppUsageInfo(
+                            packageName = packageName,
+                            appName = dataSource.getAppName(packageName),
+                            icon = null,
+                            totalTimeMs = totalTimeMs,
+                            sessionCount = metrics.appSessionCountMap[packageName] ?: 0,
+                            longestSessionMs = metrics.appLongestSessionMap[packageName] ?: 0L,
+                            category = dataSource.getAppCategory(packageName)
+                        )
+                    }
+                    val longestSessionAppInfo = topApps.find { it.packageName == metrics.longestSessionAppPackage }
                     val longestSession = if (metrics.longestSessionAppPackage != null && metrics.longestSessionMs > 0) {
                         Session(
                             packageName = metrics.longestSessionAppPackage,
@@ -210,7 +240,7 @@ class UsageRepositoryImpl @Inject constructor(
                         date = date,
                         totalScreenTimeMs = totalTime,
                         totalUnlocks = metrics.totalUnlocks,
-                        topApps = apps.take(25),
+                        topApps = topApps,
                         longestSession = longestSession,
                         peakHour = metrics.peakHour,
                         productiveHour = metrics.productiveHour,
@@ -223,22 +253,38 @@ class UsageRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getAppDetail(packageName: String): com.timelens.app.domain.model.AppDetailInfo = withContext(Dispatchers.IO) {
-        val calendar = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, 0)
-            set(java.util.Calendar.MINUTE, 0)
-            set(java.util.Calendar.SECOND, 0)
-            set(java.util.Calendar.MILLISECOND, 0)
+        val now = System.currentTimeMillis()
+        val cachedEvents = cachedTodayEvents
+        val cachedMetrics = cachedTodayMetrics
+        val canUseCache = cachedEvents != null &&
+            cachedMetrics != null &&
+            (now - cachedTodayFetchMs) < cacheTtlMs &&
+            dataSource.isAppEligibleForStats(packageName)
+
+        val events: List<android.app.usage.UsageEvents.Event>
+        val metrics: com.timelens.app.domain.util.MetricsResult
+
+        if (canUseCache) {
+            events = cachedEvents!!
+            metrics = cachedMetrics!!
+        } else {
+            val calendar = java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+            }
+            events = dataSource.getDailyEvents()
+            metrics = SessionCalculator.calculateMetrics(
+                eventsList = events,
+                startTimeMs = calendar.timeInMillis,
+                isEligibleApp = { pkg -> pkg == packageName || dataSource.isAppEligibleForStats(pkg) }
+            )
         }
-        val events = dataSource.getDailyEvents()
-        val metrics = SessionCalculator.calculateMetrics(
-            eventsList = events,
-            startTimeMs = calendar.timeInMillis,
-            isEligibleApp = { true }
-        )
 
         val totalTimeMs = metrics.appUsageMap[packageName] ?: 0L
         val sessionCount = metrics.appSessionCountMap[packageName] ?: 0
-        val longestSessionMs = if (metrics.longestSessionAppPackage == packageName) metrics.longestSessionMs else 0L
+        val longestSessionMs = metrics.appLongestSessionMap[packageName] ?: 0L
         val avgSessionMs = if (sessionCount > 0) totalTimeMs / sessionCount else 0L
 
         val hourlyUsage = SessionCalculator.calculateAppHourlyUsage(events, packageName)
@@ -246,6 +292,7 @@ class UsageRepositoryImpl @Inject constructor(
         val todayDateStr = LocalDate.now().toString()
         val dbHistory = appDailyUsageDao.getAppHistory(packageName, 7)
             .filter { it.date != todayDateStr }
+            .distinctBy { it.date }
         
         val historyList = mutableListOf<Pair<String, Long>>()
         historyList.addAll(dbHistory.map { it.date to it.totalTimeMs })
@@ -287,6 +334,7 @@ class UsageRepositoryImpl @Inject constructor(
         val dateString = summary.date.toString()
         
         dailyUsageDao.insertOrUpdate(summary.toEntity())
+        appDailyUsageDao.deleteByDate(dateString)
 
         val appEntities = summary.topApps.map { it.toEntity(dateString) }
         

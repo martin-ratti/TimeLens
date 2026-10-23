@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import com.timelens.app.domain.model.AppCategory
+import com.timelens.app.domain.util.UsageEventModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Calendar
 import java.util.concurrent.ConcurrentHashMap
@@ -29,6 +30,7 @@ class UsageDataSource @Inject constructor(
     private val appNameCache = ConcurrentHashMap<String, String>()
     private val appIconCache = ConcurrentHashMap<String, Drawable?>()
     private val categoryCache = ConcurrentHashMap<String, AppCategory>()
+    private val eligibilityCache = ConcurrentHashMap<String, Boolean>()
 
     // One-time fast batch query for all user-launchable apps
     private val launchablePackages: Set<String> by lazy {
@@ -59,6 +61,10 @@ class UsageDataSource @Inject constructor(
         ).filter { it.totalTimeInForeground > 0 }
     }
 
+    private fun isRelevantEventType(type: Int): Boolean {
+        return type == 1 || type == 2 || type == 16 || type == 17 || type == 18 || type == 26
+    }
+
     fun getDailyEvents(): List<UsageEvents.Event> {
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
@@ -66,30 +72,50 @@ class UsageDataSource @Inject constructor(
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
+        return getEventsForRange(calendar.timeInMillis, System.currentTimeMillis())
+    }
 
-        val events = usageStatsManager.queryEvents(
-            calendar.timeInMillis,
-            System.currentTimeMillis()
-        )
-
+    fun getEventsForRange(startTime: Long, endTime: Long): List<UsageEvents.Event> {
+        val events = usageStatsManager.queryEvents(startTime, endTime) ?: return emptyList()
         val eventList = mutableListOf<UsageEvents.Event>()
         while (events.hasNextEvent()) {
             val event = UsageEvents.Event()
             events.getNextEvent(event)
-            eventList.add(event)
+            if (isRelevantEventType(event.eventType)) {
+                eventList.add(event)
+            }
         }
         return eventList
     }
 
-    fun getEventsForRange(startTime: Long, endTime: Long): List<UsageEvents.Event> {
-        val events = usageStatsManager.queryEvents(startTime, endTime)
-        val eventList = mutableListOf<UsageEvents.Event>()
-        while (events.hasNextEvent()) {
-            val event = UsageEvents.Event()
-            events.getNextEvent(event)
-            eventList.add(event)
+    fun getDailyEventModels(): List<UsageEventModel> {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
         }
-        return eventList
+        return getEventModelsForRange(calendar.timeInMillis, System.currentTimeMillis())
+    }
+
+    fun getEventModelsForRange(startTime: Long, endTime: Long): List<UsageEventModel> {
+        val events = usageStatsManager.queryEvents(startTime, endTime) ?: return emptyList()
+        val modelList = ArrayList<UsageEventModel>(512)
+        val buffer = UsageEvents.Event()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(buffer)
+            val type = buffer.eventType
+            if (isRelevantEventType(type)) {
+                modelList.add(
+                    UsageEventModel(
+                        packageName = buffer.packageName,
+                        eventType = type,
+                        timeStamp = buffer.timeStamp
+                    )
+                )
+            }
+        }
+        return modelList
     }
 
     fun getUsageStatsForRange(startTime: Long, endTime: Long): List<UsageStats> {
@@ -104,8 +130,10 @@ class UsageDataSource @Inject constructor(
         return appNameCache.computeIfAbsent(packageName) {
             try {
                 val appInfo = packageManager.getApplicationInfo(packageName, 0)
+                categoryCache.putIfAbsent(packageName, mapCategoryFromAppInfo(appInfo, packageName))
                 packageManager.getApplicationLabel(appInfo).toString()
             } catch (e: PackageManager.NameNotFoundException) {
+                categoryCache.putIfAbsent(packageName, inferCategoryFromPackage(packageName))
                 when (packageName) {
                     "com.zhiliaoapp.musically" -> "TikTok"
                     "com.google.android.youtube" -> "YouTube"
@@ -123,81 +151,92 @@ class UsageDataSource @Inject constructor(
         }
     }
 
-    private val appIconBitmapCache = ConcurrentHashMap<String, ImageBitmap?>()
+    private val appIconBitmapCache = ConcurrentHashMap<String, ImageBitmap>()
+    private val missingIconPackages = ConcurrentHashMap.newKeySet<String>()
 
     fun getAppIcon(packageName: String): Drawable? {
-        return appIconCache.computeIfAbsent(packageName) {
-            try {
-                packageManager.getApplicationIcon(packageName)
-            } catch (e: Exception) {
-                null
-            }
+        return try {
+            packageManager.getApplicationIcon(packageName)
+        } catch (e: Exception) {
+            null
         }
     }
 
     fun getAppIconBitmap(packageName: String): ImageBitmap? {
-        return appIconBitmapCache.computeIfAbsent(packageName) {
-            try {
-                val drawable = getAppIcon(packageName) ?: return@computeIfAbsent null
-                val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 96
-                val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 96
-                val bitmap = drawable.toBitmap(
-                    width = width.coerceIn(48, 144),
-                    height = height.coerceIn(48, 144)
-                )
-                bitmap.asImageBitmap()
-            } catch (e: Exception) {
-                null
+        appIconBitmapCache[packageName]?.let { return it }
+        if (missingIconPackages.contains(packageName)) return null
+        return try {
+            val drawable = getAppIcon(packageName)
+            if (drawable == null) {
+                missingIconPackages.add(packageName)
+                return null
             }
+            val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 84
+            val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 84
+            val bitmap = drawable.toBitmap(
+                width = width.coerceIn(48, 84),
+                height = height.coerceIn(48, 84)
+            ).asImageBitmap()
+            appIconBitmapCache[packageName] = bitmap
+            bitmap
+        } catch (e: Exception) {
+            missingIconPackages.add(packageName)
+            null
         }
     }
 
     fun isAppEligibleForStats(packageName: String): Boolean {
-        val lowerPkg = packageName.lowercase()
-        // Always allow well-known user apps
-        if (lowerPkg.contains("youtube") || 
-            lowerPkg.contains("whatsapp") || 
-            lowerPkg.contains("instagram") || 
-            lowerPkg.contains("musically") || 
-            lowerPkg.contains("spotify") || 
-            lowerPkg.contains("twitter") || 
-            lowerPkg.contains("tiktok") || 
-            lowerPkg.contains("chrome")) {
-            return true
+        return eligibilityCache.computeIfAbsent(packageName) { pkg ->
+            val lowerPkg = pkg.lowercase()
+            if (lowerPkg.contains("youtube") ||
+                lowerPkg.contains("whatsapp") ||
+                lowerPkg.contains("instagram") ||
+                lowerPkg.contains("musically") ||
+                lowerPkg.contains("spotify") ||
+                lowerPkg.contains("twitter") ||
+                lowerPkg.contains("tiktok") ||
+                lowerPkg.contains("chrome")) {
+                return@computeIfAbsent true
+            }
+            if (lowerPkg.contains("systemui") ||
+                lowerPkg.contains("launcher") ||
+                lowerPkg.contains("digitalwellbeing") ||
+                lowerPkg.contains("overlay") ||
+                lowerPkg.contains("wallpaper") ||
+                lowerPkg.contains("settings") ||
+                lowerPkg == "android") {
+                return@computeIfAbsent false
+            }
+            launchablePackages.contains(pkg)
         }
-        // Ignore system launchers, system UI, and known internal packages
-        if (lowerPkg.contains("systemui") || 
-            lowerPkg.contains("launcher") || 
-            lowerPkg.contains("digitalwellbeing") || 
-            lowerPkg.contains("overlay") || 
-            lowerPkg.contains("wallpaper") || 
-            lowerPkg.contains("settings") || 
-            lowerPkg == "android") {
-            return false
-        }
-        // Fast O(1) in-memory lookup instead of blocking Binder IPC
-        return launchablePackages.contains(packageName)
     }
 
     fun getAppCategory(packageName: String): AppCategory {
         return categoryCache.computeIfAbsent(packageName) {
             try {
                 val appInfo = packageManager.getApplicationInfo(packageName, 0)
-                when (appInfo.category) {
-                    android.content.pm.ApplicationInfo.CATEGORY_GAME -> AppCategory.GAMING
-                    android.content.pm.ApplicationInfo.CATEGORY_AUDIO,
-                    android.content.pm.ApplicationInfo.CATEGORY_VIDEO -> AppCategory.ENTERTAINMENT
-                    android.content.pm.ApplicationInfo.CATEGORY_IMAGE,
-                    android.content.pm.ApplicationInfo.CATEGORY_SOCIAL -> AppCategory.SOCIAL
-                    android.content.pm.ApplicationInfo.CATEGORY_NEWS,
-                    android.content.pm.ApplicationInfo.CATEGORY_PRODUCTIVITY -> AppCategory.PRODUCTIVITY
-                    android.content.pm.ApplicationInfo.CATEGORY_MAPS,
-                    android.content.pm.ApplicationInfo.CATEGORY_ACCESSIBILITY -> AppCategory.UTILITY
-                    else -> inferCategoryFromPackage(packageName)
-                }
+                mapCategoryFromAppInfo(appInfo, packageName)
             } catch (e: Exception) {
                 inferCategoryFromPackage(packageName)
             }
+        }
+    }
+
+    private fun mapCategoryFromAppInfo(
+        appInfo: android.content.pm.ApplicationInfo,
+        packageName: String
+    ): AppCategory {
+        return when (appInfo.category) {
+            android.content.pm.ApplicationInfo.CATEGORY_GAME -> AppCategory.GAMING
+            android.content.pm.ApplicationInfo.CATEGORY_AUDIO,
+            android.content.pm.ApplicationInfo.CATEGORY_VIDEO -> AppCategory.ENTERTAINMENT
+            android.content.pm.ApplicationInfo.CATEGORY_IMAGE,
+            android.content.pm.ApplicationInfo.CATEGORY_SOCIAL -> AppCategory.SOCIAL
+            android.content.pm.ApplicationInfo.CATEGORY_NEWS,
+            android.content.pm.ApplicationInfo.CATEGORY_PRODUCTIVITY -> AppCategory.PRODUCTIVITY
+            android.content.pm.ApplicationInfo.CATEGORY_MAPS,
+            android.content.pm.ApplicationInfo.CATEGORY_ACCESSIBILITY -> AppCategory.UTILITY
+            else -> inferCategoryFromPackage(packageName)
         }
     }
 
@@ -215,14 +254,34 @@ class UsageDataSource @Inject constructor(
     }
 
     fun hasUsagePermission(): Boolean {
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
+        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? android.app.AppOpsManager
+        if (appOps != null) {
+            val mode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(
+                    android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(),
+                    context.packageName
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow(
+                    android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(),
+                    context.packageName
+                )
+            }
+            if (mode == android.app.AppOpsManager.MODE_ALLOWED) {
+                return true
+            }
+            if (mode == android.app.AppOpsManager.MODE_IGNORED || mode == android.app.AppOpsManager.MODE_ERRORED) {
+                return false
+            }
         }
+        val now = System.currentTimeMillis()
         val stats = usageStatsManager.queryUsageStats(
             UsageStatsManager.INTERVAL_DAILY,
-            calendar.timeInMillis,
-            System.currentTimeMillis()
+            now - 7 * 24 * 60 * 60 * 1000L,
+            now
         )
         return stats.isNotEmpty()
     }
