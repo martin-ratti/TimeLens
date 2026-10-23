@@ -25,11 +25,28 @@ class HistoryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<HistoryUiState>(HistoryUiState.Loading)
     val uiState: StateFlow<HistoryUiState> = _uiState.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         loadWeeklyData()
     }
 
-    private fun loadWeeklyData() {
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                val data = repository.getWeeklyTrend()
+                _uiState.value = HistoryUiState.Success(data)
+            } catch (e: Exception) {
+                // Keep existing state if background refresh fails
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    fun loadWeeklyData() {
         viewModelScope.launch {
             _uiState.value = HistoryUiState.Loading
             try {

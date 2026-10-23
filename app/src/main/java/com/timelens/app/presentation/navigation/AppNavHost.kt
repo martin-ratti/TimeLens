@@ -4,6 +4,7 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -11,6 +12,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -64,44 +67,56 @@ fun AppNavHost(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary
-                ) {
-                    BottomNavItem.entries.forEach { item ->
-                        val selected = currentDestination?.hierarchy?.any {
-                            it.route == item.route
-                        } == true
+                Column {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        thickness = 0.8.dp
+                    )
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        tonalElevation = 0.dp
+                    ) {
+                        BottomNavItem.entries.forEach { item ->
+                            val selected = currentDestination?.hierarchy?.any {
+                                it.route == item.route
+                            } == true
 
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                if (item == BottomNavItem.HOME) {
-                                    openDebriefOnHome = false
-                                }
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+                            NavigationBarItem(
+                                selected = selected,
+                                onClick = {
+                                    if (item == BottomNavItem.HOME) {
+                                        openDebriefOnHome = false
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = item.icon,
-                                    contentDescription = item.label
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (selected) item.icon else item.unselectedIcon,
+                                        contentDescription = item.label
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        text = item.label,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = NeonBlue,
+                                    selectedTextColor = NeonBlue,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    indicatorColor = NeonBlue.copy(alpha = 0.14f)
                                 )
-                            },
-                            label = { Text(text = item.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = NeonBlue,
-                                selectedTextColor = NeonBlue,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                indicatorColor = NeonBlue.copy(alpha = 0.12f)
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -111,8 +126,10 @@ fun AppNavHost(
             navController = navController,
             startDestination = startDestination,
             modifier = modifier.padding(innerPadding),
-            enterTransition = { fadeIn(animationSpec = tween(300)) },
-            exitTransition = { fadeOut(animationSpec = tween(300)) }
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None }
         ) {
             composable(NavRoutes.Onboarding.route) {
                 OnboardingScreen(

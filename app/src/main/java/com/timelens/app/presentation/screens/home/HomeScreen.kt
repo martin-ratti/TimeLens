@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,8 +21,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
+import android.provider.Settings
 import com.timelens.app.domain.model.AppCategory
 import com.timelens.app.domain.model.DaySummary
 import com.timelens.app.domain.model.WellnessReport
@@ -57,24 +60,26 @@ fun HomeScreen(
 
     LaunchedEffect(openDebriefDirectly) {
         if (openDebriefDirectly) {
-            isNightDebrief = isNightHour
+            viewModel.refresh()
+            isNightDebrief = true
             showDebriefSheet = true
         }
     }
 
     val onShareReport: () -> Unit = {
         val state = uiState as? HomeUiState.Success
-        if (state?.wellnessReport != null) {
+        val activeReport = if (isNightDebrief) (state?.nightWellnessReport ?: state?.wellnessReport) else state?.wellnessReport
+        if (state != null && activeReport != null) {
             val dateFormatted = java.time.LocalDate.now().format(
                 java.time.format.DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", java.util.Locale("es", "ES"))
             ).replaceFirstChar { it.uppercase() }
             val shareHeader = if (isNightDebrief) "🌙 Cierre de Bienestar TimeLens" else "📊 Diagnóstico de Hábitos TimeLens"
             val shareText = buildString {
                 append("$shareHeader — $dateFormatted\n\n")
-                append("⏱️ Tiempo de pantalla: ${TimeFormatter.formatMillisToShort(state.summary.totalScreenTimeMs)} (${state.comparisonText})\n")
-                append("🌱 Score de Bienestar: ${state.wellnessReport.overallScore}/100 (${state.wellnessReport.overallStatus})\n")
+                append("⏱️ Tiempo de pantalla: ${TimeFormatter.formatMillisToShort(state.summary.totalScreenTimeMs)} / Límite: ${state.dailyGoalHours}h (${state.comparisonText})\n")
+                append("🌱 Score de Bienestar: ${activeReport.overallScore}/100 (${activeReport.overallStatus})\n")
                 append("🔓 Desbloqueos: ${state.summary.totalUnlocks} veces\n")
-                append("💡 Consejo destacado: ${state.wellnessReport.primaryInsight.title}: ${state.wellnessReport.primaryInsight.actionTip}\n\n")
+                append("💡 Consejo destacado: ${activeReport.primaryInsight.title}: ${activeReport.primaryInsight.actionTip}\n\n")
                 append("Seguimiento consciente con #TimeLens")
             }
             val sendIntent = Intent().apply {
@@ -86,23 +91,46 @@ fun HomeScreen(
         }
     }
 
+    val todaySubtitle = remember {
+        java.time.LocalDate.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", java.util.Locale("es", "ES"))
+        ).replaceFirstChar { it.uppercase() }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.RemoveRedEye,
-                            contentDescription = null,
-                            tint = NeonBlue
-                        )
-                        Text(
-                            text = "TimeLens",
-                            fontWeight = FontWeight.Bold
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(NeonBlue.copy(alpha = 0.14f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.RemoveRedEye,
+                                contentDescription = null,
+                                tint = NeonBlue,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = "TimeLens",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Text(
+                                text = todaySubtitle,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 actions = {
@@ -144,32 +172,99 @@ fun HomeScreen(
                     )
                 }
                 is HomeUiState.MissingPermission -> {
+                    LifecycleResumeEffect(Unit) {
+                        viewModel.loadData()
+                        onPauseOrDispose { }
+                    }
                     Column(
                         modifier = Modifier
                             .align(Alignment.Center)
                             .padding(32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(NeonRed.copy(alpha = 0.14f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Lock,
+                                contentDescription = null,
+                                tint = NeonRed,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = "Permiso de acceso a uso requerido",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Se necesita permiso de acceso a uso para analizar tus sesiones y mostrar tus métricas locales.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = {
+                                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                                context.startActivity(intent)
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = NeonBlue,
+                                contentColor = DarkBackground
+                            ),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Conceder permiso en Ajustes", fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(onClick = { viewModel.loadData() }) {
+                            Text("Ya lo activé • Actualizar", color = NeonBlue)
+                        }
+                    }
+                }
+                is HomeUiState.Error -> {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Icon(
-                            imageVector = Icons.Outlined.Lock,
+                            imageVector = Icons.Outlined.ErrorOutline,
                             contentDescription = null,
                             tint = NeonRed,
                             modifier = Modifier.size(48.dp)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Se necesita permiso de acceso a uso para mostrar tus estadísticas.",
-                            color = MaterialTheme.colorScheme.onSurface,
+                            text = "Error: ${state.message}",
+                            color = NeonRed,
+                            style = MaterialTheme.typography.bodyMedium,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.loadData() },
+                            border = BorderStroke(1.dp, NeonBlue.copy(alpha = 0.5f))
+                        ) {
+                            Text("Reintentar", color = NeonBlue)
+                        }
                     }
-                }
-                is HomeUiState.Error -> {
-                    Text(
-                        text = "Error: ${state.message}",
-                        color = NeonRed,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
                 }
                 is HomeUiState.Success -> {
                     val pullRefreshState = rememberPullToRefreshState()
@@ -208,9 +303,10 @@ fun HomeScreen(
 
         if (showDebriefSheet && uiState is HomeUiState.Success) {
             val success = uiState as HomeUiState.Success
-            if (success.wellnessReport != null) {
+            val activeReport = if (isNightDebrief) (success.nightWellnessReport ?: success.wellnessReport) else success.wellnessReport
+            if (activeReport != null) {
                 DailyDebriefBottomSheet(
-                    report = success.wellnessReport,
+                    report = activeReport,
                     summary = success.summary,
                     comparisonText = success.comparisonText,
                     dailyGoalHours = success.dailyGoalHours,
@@ -267,69 +363,67 @@ fun HomeContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
-        item {
+        item(key = "hero_progress", contentType = "hero") {
             CircularProgressCard(
                 totalTimeText = TimeFormatter.formatMillisToShort(summary.totalScreenTimeMs),
                 progress = progress,
                 comparisonText = comparisonText,
-                goalHours = dailyGoalHours
+                goalHours = dailyGoalHours,
+                usedMillis = summary.totalScreenTimeMs
             )
         }
 
-        item {
-            Column(
+        item(key = "stats_row_1", contentType = "stat_row") {
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    StatCard(
-                        icon = Icons.Outlined.LockOpen,
-                        title = "Desbloqueos",
-                        value = summary.totalUnlocks.toString(),
-                        subtitle = "hoy",
-                        accentColor = NeonOrange,
-                        modifier = Modifier.weight(1f)
-                    )
-                    StatCard(
-                        icon = Icons.Outlined.Timer,
-                        title = "Sesión máx.",
-                        value = summary.longestSession?.durationMs?.let { TimeFormatter.formatMillisToShort(it) } ?: "0m",
-                        subtitle = summary.longestSession?.appName ?: "Sin uso",
-                        accentColor = NeonPurple,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                StatCard(
+                    icon = Icons.Outlined.LockOpen,
+                    title = "Desbloqueos",
+                    value = summary.totalUnlocks.toString(),
+                    subtitle = "hoy",
+                    accentColor = NeonOrange,
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    icon = Icons.Outlined.Timer,
+                    title = "Sesión máx.",
+                    value = summary.longestSession?.durationMs?.let { TimeFormatter.formatMillisToShort(it) } ?: "0m",
+                    subtitle = summary.longestSession?.appName ?: "Sin uso",
+                    accentColor = NeonPurple,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    StatCard(
-                        icon = Icons.Outlined.Schedule,
-                        title = "Horario pico",
-                        value = TimeFormatter.getTimeOfDayLabel(summary.peakHour),
-                        subtitle = String.format(java.util.Locale.getDefault(), "%02d:00", summary.peakHour),
-                        accentColor = NeonBlue,
-                        modifier = Modifier.weight(1f)
-                    )
-                    StatCard(
-                        icon = Icons.Outlined.CenterFocusStrong,
-                        title = "Más productivo",
-                        value = TimeFormatter.getTimeOfDayLabel(summary.productiveHour),
-                        subtitle = String.format(java.util.Locale.getDefault(), "%02d:00", summary.productiveHour),
-                        accentColor = NeonGreen,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+        item(key = "stats_row_2", contentType = "stat_row") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                StatCard(
+                    icon = Icons.Outlined.Schedule,
+                    title = "Horario pico",
+                    value = TimeFormatter.getTimeOfDayLabel(summary.peakHour),
+                    subtitle = String.format(java.util.Locale.getDefault(), "%02d:00", summary.peakHour),
+                    accentColor = NeonBlue,
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    icon = Icons.Outlined.CenterFocusStrong,
+                    title = "Más productivo",
+                    value = TimeFormatter.getTimeOfDayLabel(summary.productiveHour),
+                    subtitle = String.format(java.util.Locale.getDefault(), "%02d:00", summary.productiveHour),
+                    accentColor = NeonGreen,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
 
         // Resumen de Bienestar: Diagnóstico, Alertas y Consejos
         if (wellnessReport != null) {
-            item {
+            item(key = "wellness_summary", contentType = "wellness") {
                 WellnessSummaryCard(
                     report = wellnessReport,
                     onViewFullSummary = onNavigateToSummary
@@ -482,7 +576,11 @@ fun HomeContent(
                 }
             }
         } else {
-            items(items = filteredApps, key = { it.packageName }) { appInfo ->
+            itemsIndexed(
+                items = filteredApps,
+                key = { _, app -> app.packageName },
+                contentType = { _, _ -> "app_usage_card" }
+            ) { index, appInfo ->
                 val appProgress = if (summary.totalScreenTimeMs > 0L) {
                     (appInfo.totalTimeMs.toFloat() / summary.totalScreenTimeMs).coerceIn(0f, 1f)
                 } else {
@@ -497,6 +595,11 @@ fun HomeContent(
                     AppCategory.EDUCATION -> NeonBlue
                     else -> NeonBlue
                 }
+                val longestSessionFormatted = if (appInfo.longestSessionMs > 0L) {
+                    TimeFormatter.formatMillisToShort(appInfo.longestSessionMs)
+                } else {
+                    null
+                }
                 AppUsageCard(
                     icon = appInfo.icon ?: Icons.Outlined.Apps,
                     appName = appInfo.appName,
@@ -505,6 +608,8 @@ fun HomeContent(
                     accentColor = catAccent,
                     sessionCount = appInfo.sessionCount,
                     category = appInfo.category,
+                    rank = if (selectedCategory == null) index + 1 else null,
+                    longestSessionText = longestSessionFormatted,
                     onClick = { onAppClick(appInfo.packageName) }
                 )
             }

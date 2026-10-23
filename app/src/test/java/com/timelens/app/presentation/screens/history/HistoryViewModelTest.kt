@@ -59,4 +59,15 @@ class HistoryViewModelTest {
         val error = state as HistoryUiState.Error
         assertEquals("Error en repository", error.message)
     }
+
+    @Test
+    fun `refresh updates weekly data and resets isRefreshing`() = runTest {
+        val viewModel = HistoryViewModel(fakeRepository)
+        assertFalse(viewModel.isRefreshing.value)
+
+        viewModel.refresh()
+
+        assertFalse(viewModel.isRefreshing.value)
+        assertTrue(viewModel.uiState.value is HistoryUiState.Success)
+    }
 }

@@ -24,7 +24,8 @@ sealed interface HomeUiState {
         val summary: DaySummary,
         val comparisonText: String = "",
         val dailyGoalHours: Int = 6,
-        val wellnessReport: WellnessReport? = null
+        val wellnessReport: WellnessReport? = null,
+        val nightWellnessReport: WellnessReport? = null
     ) : HomeUiState
     data class Error(val message: String) : HomeUiState
     data object MissingPermission : HomeUiState
@@ -52,8 +53,13 @@ class HomeViewModel @Inject constructor(
                 val current = _uiState.value
                 if (current is HomeUiState.Success && current.dailyGoalHours != newGoal) {
                     val yesterday = repository.getDaySummary(LocalDate.now().minusDays(1))
-                    val updatedReport = getWellnessReportUseCase(current.summary, yesterday, newGoal)
-                    _uiState.value = current.copy(dailyGoalHours = newGoal, wellnessReport = updatedReport)
+                    val updatedReport = getWellnessReportUseCase(current.summary, yesterday, newGoal, isNightReview = false)
+                    val updatedNightReport = getWellnessReportUseCase(current.summary, yesterday, newGoal, isNightReview = true)
+                    _uiState.value = current.copy(
+                        dailyGoalHours = newGoal,
+                        wellnessReport = updatedReport,
+                        nightWellnessReport = updatedNightReport
+                    )
                 }
             }
         }
@@ -70,14 +76,16 @@ class HomeViewModel @Inject constructor(
                     val comparisonText = if (yesterday != null && yesterday.totalScreenTimeMs > 0) {
                         TimeFormatter.formatPercentageChange(summary.totalScreenTimeMs, yesterday.totalScreenTimeMs)
                     } else {
-                        "Meta diaria: ${goal}h"
+                        "Límite diario: ${goal}h"
                     }
-                    val wellnessReport = getWellnessReportUseCase(summary, yesterday, goal)
+                    val wellnessReport = getWellnessReportUseCase(summary, yesterday, goal, isNightReview = false)
+                    val nightWellnessReport = getWellnessReportUseCase(summary, yesterday, goal, isNightReview = true)
                     _uiState.value = HomeUiState.Success(
                         summary = summary,
                         comparisonText = comparisonText,
                         dailyGoalHours = goal,
-                        wellnessReport = wellnessReport
+                        wellnessReport = wellnessReport,
+                        nightWellnessReport = nightWellnessReport
                     )
                 }
             } catch (e: Exception) {
@@ -102,16 +110,18 @@ class HomeViewModel @Inject constructor(
                 val comparisonText = if (yesterday != null && yesterday.totalScreenTimeMs > 0) {
                     TimeFormatter.formatPercentageChange(summary.totalScreenTimeMs, yesterday.totalScreenTimeMs)
                 } else {
-                    "Meta diaria: ${goal}h"
+                    "Límite diario: ${goal}h"
                 }
 
-                val wellnessReport = getWellnessReportUseCase(summary, yesterday, goal)
+                val wellnessReport = getWellnessReportUseCase(summary, yesterday, goal, isNightReview = false)
+                val nightWellnessReport = getWellnessReportUseCase(summary, yesterday, goal, isNightReview = true)
 
                 _uiState.value = HomeUiState.Success(
                     summary = summary,
                     comparisonText = comparisonText,
                     dailyGoalHours = goal,
-                    wellnessReport = wellnessReport
+                    wellnessReport = wellnessReport,
+                    nightWellnessReport = nightWellnessReport
                 )
             } catch (e: Exception) {
                 _uiState.value = HomeUiState.Error(e.message ?: "Error desconocido")
