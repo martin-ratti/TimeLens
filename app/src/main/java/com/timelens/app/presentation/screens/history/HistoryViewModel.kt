@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.timelens.app.domain.model.DaySummary
 import com.timelens.app.domain.repository.UsageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,6 +47,8 @@ class HistoryViewModel @Inject constructor(
             try {
                 val data = repository.getTrend(days)
                 _uiState.value = HistoryUiState.Success(data)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 if (_uiState.value !is HistoryUiState.Success) {
                     _uiState.value = HistoryUiState.Error(e.message ?: "Error desconocido")
@@ -60,6 +63,8 @@ class HistoryViewModel @Inject constructor(
             try {
                 val data = repository.getTrend(_rangeDays.value)
                 _uiState.value = HistoryUiState.Success(data)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Keep existing state if background refresh fails
             } finally {
@@ -75,6 +80,8 @@ class HistoryViewModel @Inject constructor(
             try {
                 val data = repository.getTrend(_rangeDays.value)
                 _uiState.value = HistoryUiState.Success(data)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = HistoryUiState.Error(e.message ?: "Error desconocido")
             }

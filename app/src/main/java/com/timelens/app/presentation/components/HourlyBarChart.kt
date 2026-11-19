@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -37,7 +38,7 @@ fun HourlyBarChart(
         hourlyUsageMs.values.maxOrNull()?.coerceAtLeast(1L) ?: 1L
     }
 
-    var selectedHour by remember { mutableStateOf<Int?>(null) }
+    var selectedHour by rememberSaveable { mutableStateOf<Int?>(null) }
     val haptic = LocalHapticFeedback.current
 
     Column(modifier = modifier.fillMaxWidth()) {

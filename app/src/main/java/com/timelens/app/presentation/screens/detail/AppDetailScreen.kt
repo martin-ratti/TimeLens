@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,7 +53,7 @@ fun AppDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val appLimitMinutes by viewModel.appLimitMinutes.collectAsStateWithLifecycle()
-    var showLimitDialog by remember { mutableStateOf(false) }
+    var showLimitDialog by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -304,10 +305,16 @@ fun AppDetailContent(
 
                         OutlinedButton(
                             onClick = {
-                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", detail.packageName, null)
+                                try {
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", detail.packageName, null)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: android.content.ActivityNotFoundException) {
+                                    runCatching {
+                                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                                    }
                                 }
-                                context.startActivity(intent)
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -344,11 +351,30 @@ fun AppDetailContent(
 
         // Grid de 6 KPIs Enriquecidos (3 filas de 2 tarjetas)
         item {
-            val frequencyText = if (detail.sessionCount > 0 && detail.totalTimeMs > 0) {
-                val minsPerSession = (detail.totalTimeMs / detail.sessionCount / 60000).coerceAtLeast(1)
-                "Frecuencia: ~$minsPerSession min"
-            } else {
-                "sesiones registradas"
+            val frequencyText = remember(detail.sessionCount, detail.hourlyUsageMs, detail.lastUsedTimestampMs) {
+                val activeHours = detail.hourlyUsageMs.filter { it.value > 0L }.keys
+                if (detail.sessionCount > 1 && activeHours.isNotEmpty()) {
+                    val firstHour = activeHours.minOrNull() ?: 8
+                    val lastHour = (activeHours.maxOrNull() ?: firstHour) + 1
+                    val windowMinutes = ((lastHour - firstHour).coerceAtLeast(1)) * 60
+                    val intervalMins = (windowMinutes / detail.sessionCount).coerceAtLeast(1)
+                    if (intervalMins >= 60) {
+                        val h = intervalMins / 60
+                        val m = intervalMins % 60
+                        if (m > 0) "Cada ~${h}h ${m}m" else "Cada ~${h}h"
+                    } else {
+                        "Cada ~$intervalMins min"
+                    }
+                } else if (detail.lastUsedTimestampMs > 0L) {
+                    val lastTime = java.time.Instant.ofEpochMilli(detail.lastUsedTimestampMs)
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalTime()
+                    String.format(java.util.Locale.getDefault(), "Últ. vez %02d:%02d hs", lastTime.hour, lastTime.minute)
+                } else if (detail.sessionCount == 1) {
+                    "1 apertura hoy"
+                } else {
+                    "Sin aperturas hoy"
+                }
             }
 
             Row(
@@ -755,47 +781,51 @@ fun AppLimitCard(
 
 @Composable
 fun AppWellnessInsightCard(detail: AppDetailInfo) {
-    val insight = remember(detail) {
+    val orangeColor = NeonOrange
+    val purpleColor = NeonPurple
+    val blueColor = NeonBlue
+    val greenColor = NeonGreen
+    val insight = remember(detail, orangeColor, purpleColor, blueColor, greenColor) {
         when {
             detail.totalTimeMs > 2 * 60 * 60 * 1000L -> {
                 Triple(
                     Icons.Outlined.Lightbulb,
-                    NeonOrange,
+                    orangeColor,
                     "Uso elevado hoy (${TimeFormatter.formatMillisToShort(detail.totalTimeMs)}). Establecer un límite diario te ayudará a liberar tiempo para otras actividades."
                 )
             }
             detail.longestSessionMs > 45 * 60 * 1000L -> {
                 Triple(
                     Icons.Outlined.Visibility,
-                    NeonPurple,
+                    purpleColor,
                     "Sesión continua prolongada de ${TimeFormatter.formatMillisToShort(detail.longestSessionMs)}. Aplicá la regla 20-20-20: cada 20 minutos mirá a lo lejos 20 segundos para relajar la vista."
                 )
             }
             detail.peakHour >= 22 || detail.peakHour < 5 -> {
                 Triple(
                     Icons.Outlined.Bedtime,
-                    NeonPurple,
+                    purpleColor,
                     "Tu mayor actividad en esta app ocurre de noche (${String.format("%02d:00", detail.peakHour)} hs). Reducir el uso antes de dormir mejora el descanso profundo."
                 )
             }
             detail.sessionCount >= 15 -> {
                 Triple(
                     Icons.Outlined.NotificationsPaused,
-                    NeonBlue,
+                    blueColor,
                     "Aperturas muy frecuentes (${detail.sessionCount} veces). Si entrás por impulso, silenciar sus notificaciones puede reducir las interrupciones."
                 )
             }
             detail.category == AppCategory.PRODUCTIVITY -> {
                 Triple(
                     Icons.Outlined.CenterFocusStrong,
-                    NeonGreen,
+                    greenColor,
                     "Herramienta clave de productividad. Mantenés un ritmo de trabajo enfocado y eficiente."
                 )
             }
             else -> {
                 Triple(
                     Icons.Outlined.CheckCircle,
-                    NeonGreen,
+                    greenColor,
                     "Patrón de uso equilibrado y bajo control en esta aplicación."
                 )
             }
@@ -858,7 +888,7 @@ fun AppLimitDialog(
     onDismiss: () -> Unit
 ) {
     val options = listOf(15, 30, 45, 60, 90, 120, 180)
-    var selectedMinutes by remember { mutableStateOf(currentLimitMinutes ?: 45) }
+    var selectedMinutes by rememberSaveable { mutableStateOf(currentLimitMinutes ?: 45) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

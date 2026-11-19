@@ -100,11 +100,16 @@ fun CircularProgressCard(
             Spacer(modifier = Modifier.height(20.dp))
 
             val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-            val gradientBrush = remember(isExceeded, isNearLimit) {
+            val blueColor = NeonBlue
+            val cyanColor = NeonCyan
+            val purpleColor = NeonPurple
+            val orangeColor = NeonOrange
+            val redColor = NeonRed
+            val gradientBrush = remember(isExceeded, isNearLimit, blueColor, cyanColor, purpleColor, orangeColor, redColor) {
                 when {
-                    isExceeded -> Brush.sweepGradient(listOf(NeonOrange, NeonRed, NeonRed, NeonOrange))
-                    isNearLimit -> Brush.sweepGradient(listOf(NeonBlue, NeonOrange, NeonRed, NeonBlue))
-                    else -> Brush.sweepGradient(listOf(NeonCyan, NeonBlue, NeonPurple, NeonCyan))
+                    isExceeded -> Brush.sweepGradient(listOf(orangeColor, redColor, redColor, orangeColor))
+                    isNearLimit -> Brush.sweepGradient(listOf(blueColor, orangeColor, redColor, blueColor))
+                    else -> Brush.sweepGradient(listOf(cyanColor, blueColor, purpleColor, cyanColor))
                 }
             }
 

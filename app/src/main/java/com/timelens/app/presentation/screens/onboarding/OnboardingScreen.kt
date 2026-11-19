@@ -15,7 +15,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,7 +27,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.timelens.app.presentation.theme.*
 
 @Composable
@@ -37,17 +39,21 @@ fun OnboardingScreen(
     checkPermissionOverride: (() -> Boolean)? = null
 ) {
     val context = LocalContext.current
+    var showMissingPermissionHint by rememberSaveable { mutableStateOf(false) }
+
+    val isPermissionGranted: () -> Boolean = {
+        checkPermissionOverride?.invoke() ?: hasUsageStatsPermission(context)
+    }
 
     // Bloquea el botón "Atrás" para que el usuario no quede atrapado fuera del flujo
     BackHandler(enabled = true) { /* Consumido intencionalmente */ }
 
     // Auto-detección cuando el usuario vuelve de Configuración
-    LifecycleResumeEffect(Unit) {
-        val granted = checkPermissionOverride?.invoke() ?: hasUsageStatsPermission(context)
-        if (granted) {
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (isPermissionGranted()) {
+            showMissingPermissionHint = false
             onPermissionGranted()
         }
-        onPauseOrDispose { }
     }
 
     Column(
@@ -152,10 +158,43 @@ fun OnboardingScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        if (showMissingPermissionHint) {
+            Spacer(modifier = Modifier.height(14.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = NeonOrange.copy(alpha = 0.12f)
+                ),
+                border = BorderStroke(1.dp, NeonOrange.copy(alpha = 0.45f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.WarningAmber,
+                        contentDescription = null,
+                        tint = NeonOrange,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Aún no detectamos el permiso activo. Tocá \"Habilitar Acceso de Uso\", buscá TimeLens en la lista y activalo para continuar.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = onOpenSettings,
+            onClick = {
+                showMissingPermissionHint = false
+                onOpenSettings()
+            },
             colors = ButtonDefaults.buttonColors(containerColor = NeonBlue),
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier
@@ -178,7 +217,14 @@ fun OnboardingScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         TextButton(
-            onClick = onPermissionGranted,
+            onClick = {
+                if (isPermissionGranted()) {
+                    showMissingPermissionHint = false
+                    onPermissionGranted()
+                } else {
+                    showMissingPermissionHint = true
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(

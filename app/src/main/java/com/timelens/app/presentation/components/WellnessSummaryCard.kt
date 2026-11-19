@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,7 +34,7 @@ fun WellnessSummaryCard(
     modifier: Modifier = Modifier,
     onViewFullSummary: (() -> Unit)? = null
 ) {
-    var currentIndex by remember(report) { mutableIntStateOf(0) }
+    var currentIndex by rememberSaveable(report.date.toString()) { mutableIntStateOf(0) }
     val insights = report.allInsights.ifEmpty { listOf(report.primaryInsight) }
     val currentInsight = insights.getOrElse(currentIndex) { report.primaryInsight }
 
@@ -106,19 +107,19 @@ fun WellnessSummaryCard(
                 if (insights.size > 1) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         IconButton(
                             onClick = {
                                 currentIndex = if (currentIndex > 0) currentIndex - 1 else insights.size - 1
                             },
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                                 contentDescription = "Anterior",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
 
@@ -133,13 +134,13 @@ fun WellnessSummaryCard(
                             onClick = {
                                 currentIndex = if (currentIndex < insights.size - 1) currentIndex + 1 else 0
                             },
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                                 contentDescription = "Siguiente",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }

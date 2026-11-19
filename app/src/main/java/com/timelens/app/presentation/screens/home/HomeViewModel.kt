@@ -11,11 +11,13 @@ import com.timelens.app.domain.usecase.GetDailySummaryUseCase
 import com.timelens.app.domain.usecase.GetWellnessReportUseCase
 import com.timelens.app.util.TimeFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 import javax.inject.Inject
 
 sealed interface HomeUiState {
@@ -46,6 +48,25 @@ class HomeViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private fun currentDayElapsedFraction(): Float {
+        val now = LocalTime.now()
+        val minutesOfDay = now.hour * 60 + now.minute
+        return (minutesOfDay.toFloat() / 1440f).coerceIn(0.15f, 1f)
+    }
+
+    private fun buildComparisonText(
+        todayMs: Long,
+        yesterdayMs: Long?,
+        goalHours: Int,
+        fraction: Float
+    ): String {
+        if (yesterdayMs == null || yesterdayMs <= 0L) {
+            return "Límite diario: ${goalHours}h"
+        }
+        val baselineMs = (yesterdayMs * fraction).toLong().coerceAtLeast(1L)
+        return TimeFormatter.formatPercentageChange(todayMs, baselineMs)
+    }
+
     init {
         loadData()
         viewModelScope.launch {
@@ -53,10 +74,30 @@ class HomeViewModel @Inject constructor(
                 val current = _uiState.value
                 if (current is HomeUiState.Success && current.dailyGoalHours != newGoal) {
                     val yesterday = repository.getDaySummary(LocalDate.now().minusDays(1))
-                    val updatedReport = getWellnessReportUseCase(current.summary, yesterday, newGoal, isNightReview = false)
-                    val updatedNightReport = getWellnessReportUseCase(current.summary, yesterday, newGoal, isNightReview = true)
+                    val fraction = currentDayElapsedFraction()
+                    val updatedReport = getWellnessReportUseCase(
+                        current.summary,
+                        yesterday,
+                        newGoal,
+                        isNightReview = false,
+                        dayElapsedFraction = fraction
+                    )
+                    val updatedNightReport = getWellnessReportUseCase(
+                        current.summary,
+                        yesterday,
+                        newGoal,
+                        isNightReview = true,
+                        dayElapsedFraction = 1f
+                    )
+                    val comparisonText = buildComparisonText(
+                        todayMs = current.summary.totalScreenTimeMs,
+                        yesterdayMs = yesterday?.totalScreenTimeMs,
+                        goalHours = newGoal,
+                        fraction = fraction
+                    )
                     _uiState.value = current.copy(
                         dailyGoalHours = newGoal,
+                        comparisonText = comparisonText,
                         wellnessReport = updatedReport,
                         nightWellnessReport = updatedNightReport
                     )
@@ -73,13 +114,27 @@ class HomeViewModel @Inject constructor(
                     val summary = getDailySummaryUseCase()
                     val yesterday = repository.getDaySummary(LocalDate.now().minusDays(1))
                     val goal = prefsManager.dailyGoalHours.value
-                    val comparisonText = if (yesterday != null && yesterday.totalScreenTimeMs > 0) {
-                        TimeFormatter.formatPercentageChange(summary.totalScreenTimeMs, yesterday.totalScreenTimeMs)
-                    } else {
-                        "Límite diario: ${goal}h"
-                    }
-                    val wellnessReport = getWellnessReportUseCase(summary, yesterday, goal, isNightReview = false)
-                    val nightWellnessReport = getWellnessReportUseCase(summary, yesterday, goal, isNightReview = true)
+                    val fraction = currentDayElapsedFraction()
+                    val comparisonText = buildComparisonText(
+                        todayMs = summary.totalScreenTimeMs,
+                        yesterdayMs = yesterday?.totalScreenTimeMs,
+                        goalHours = goal,
+                        fraction = fraction
+                    )
+                    val wellnessReport = getWellnessReportUseCase(
+                        summary,
+                        yesterday,
+                        goal,
+                        isNightReview = false,
+                        dayElapsedFraction = fraction
+                    )
+                    val nightWellnessReport = getWellnessReportUseCase(
+                        summary,
+                        yesterday,
+                        goal,
+                        isNightReview = true,
+                        dayElapsedFraction = 1f
+                    )
                     _uiState.value = HomeUiState.Success(
                         summary = summary,
                         comparisonText = comparisonText,
@@ -88,6 +143,8 @@ class HomeViewModel @Inject constructor(
                         nightWellnessReport = nightWellnessReport
                     )
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Mantener estado actual si falla el refresh en background
             } finally {
@@ -107,14 +164,28 @@ class HomeViewModel @Inject constructor(
                 val summary = getDailySummaryUseCase()
                 val yesterday = repository.getDaySummary(LocalDate.now().minusDays(1))
                 val goal = prefsManager.dailyGoalHours.value
-                val comparisonText = if (yesterday != null && yesterday.totalScreenTimeMs > 0) {
-                    TimeFormatter.formatPercentageChange(summary.totalScreenTimeMs, yesterday.totalScreenTimeMs)
-                } else {
-                    "Límite diario: ${goal}h"
-                }
+                val fraction = currentDayElapsedFraction()
+                val comparisonText = buildComparisonText(
+                    todayMs = summary.totalScreenTimeMs,
+                    yesterdayMs = yesterday?.totalScreenTimeMs,
+                    goalHours = goal,
+                    fraction = fraction
+                )
 
-                val wellnessReport = getWellnessReportUseCase(summary, yesterday, goal, isNightReview = false)
-                val nightWellnessReport = getWellnessReportUseCase(summary, yesterday, goal, isNightReview = true)
+                val wellnessReport = getWellnessReportUseCase(
+                    summary,
+                    yesterday,
+                    goal,
+                    isNightReview = false,
+                    dayElapsedFraction = fraction
+                )
+                val nightWellnessReport = getWellnessReportUseCase(
+                    summary,
+                    yesterday,
+                    goal,
+                    isNightReview = true,
+                    dayElapsedFraction = 1f
+                )
 
                 _uiState.value = HomeUiState.Success(
                     summary = summary,
@@ -123,6 +194,8 @@ class HomeViewModel @Inject constructor(
                     wellnessReport = wellnessReport,
                     nightWellnessReport = nightWellnessReport
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = HomeUiState.Error(e.message ?: "Error desconocido")
             }

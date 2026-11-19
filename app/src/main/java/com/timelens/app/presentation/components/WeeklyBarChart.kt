@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -42,7 +43,7 @@ fun WeeklyBarChart(
     }
 
     val maxMs = remember(valuesMs) { valuesMs.maxOrNull()?.coerceAtLeast(1L) ?: 1L }
-    var selectedIndex by remember(days) { mutableStateOf<Int?>(null) }
+    var selectedIndex by rememberSaveable(days) { mutableStateOf<Int?>(null) }
     val haptic = LocalHapticFeedback.current
 
     val dense = days.size > 7
@@ -86,11 +87,12 @@ fun WeeklyBarChart(
         }
 
         val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+        val blueColor = NeonBlue
         val normalBrush = remember(barColor) {
             Brush.verticalGradient(listOf(barColor, barColor.copy(alpha = 0.7f)))
         }
-        val selectedBrush = remember(barColor) {
-            Brush.verticalGradient(listOf(NeonBlue, barColor))
+        val selectedBrush = remember(barColor, blueColor) {
+            Brush.verticalGradient(listOf(blueColor, barColor))
         }
 
         Row(

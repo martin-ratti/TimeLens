@@ -21,7 +21,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import android.provider.Settings
@@ -57,6 +58,14 @@ fun HomeScreen(
 
     var showDebriefSheet by rememberSaveable { mutableStateOf(false) }
     var isNightDebrief by rememberSaveable { mutableStateOf(false) }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        when (uiState) {
+            is HomeUiState.Success -> viewModel.refresh()
+            is HomeUiState.MissingPermission -> viewModel.loadData()
+            else -> {}
+        }
+    }
 
     LaunchedEffect(openDebriefDirectly) {
         if (openDebriefDirectly) {
@@ -172,10 +181,6 @@ fun HomeScreen(
                     )
                 }
                 is HomeUiState.MissingPermission -> {
-                    LifecycleResumeEffect(Unit) {
-                        viewModel.loadData()
-                        onPauseOrDispose { }
-                    }
                     Column(
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -214,8 +219,14 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                         Button(
                             onClick = {
-                                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                                context.startActivity(intent)
+                                try {
+                                    val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                                    context.startActivity(intent)
+                                } catch (e: android.content.ActivityNotFoundException) {
+                                    runCatching {
+                                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                                    }
+                                }
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = NeonBlue,

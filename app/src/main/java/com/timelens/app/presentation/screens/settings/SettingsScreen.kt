@@ -22,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.timelens.app.BuildConfig
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,8 +50,8 @@ fun SettingsScreen(
 
     val context = LocalContext.current
 
-    var showGoalDialog by remember { mutableStateOf(false) }
-    var showAboutDialog by remember { mutableStateOf(false) }
+    var showGoalDialog by rememberSaveable { mutableStateOf(false) }
+    var showAboutDialog by rememberSaveable { mutableStateOf(false) }
 
     var hasPermission by remember {
         mutableStateOf(
@@ -476,7 +478,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "TimeLens v0.2.0 • 100% Local & Privado",
+                text = "TimeLens v${BuildConfig.VERSION_NAME} • 100% Local & Privado",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -683,7 +685,7 @@ fun SettingsScreen(
                     }
 
                     Text(
-                        text = "Versión 0.2.0 • Código Abierto",
+                        text = "Versión ${BuildConfig.VERSION_NAME} • Código Abierto",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -694,8 +696,10 @@ fun SettingsScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/martin-ratti/TimeLens"))
-                            context.startActivity(intent)
+                            runCatching {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/martin-ratti/TimeLens"))
+                                context.startActivity(intent)
+                            }
                         },
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonBlue)
                     ) {

@@ -7,6 +7,7 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.timelens.app.domain.model.ThemeMode
@@ -20,9 +21,9 @@ val TimeLensShapes = Shapes(
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = NeonBlue,
-    secondary = NeonPurple,
-    tertiary = NeonGreen,
+    primary = DarkNeonBlue,
+    secondary = DarkNeonPurple,
+    tertiary = DarkNeonGreen,
     background = DarkBackground,
     surface = DarkSurface,
     surfaceVariant = DarkCard,
@@ -37,9 +38,9 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF0284C7),
-    secondary = Color(0xFF7C3AED),
-    tertiary = Color(0xFF059669),
+    primary = LightNeonBlue,
+    secondary = LightNeonPurple,
+    tertiary = LightNeonGreen,
     background = Color(0xFFF1F5F9),
     surface = Color(0xFFFFFFFF),
     surfaceVariant = Color(0xFFF8FAFC),
@@ -65,13 +66,16 @@ fun TimeLensTheme(
     }
 
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val accentPalette = if (darkTheme) DarkAccentPalette else LightAccentPalette
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        shapes = TimeLensShapes,
-        content = content
-    )
+    CompositionLocalProvider(LocalTimeLensAccents provides accentPalette) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = TimeLensShapes,
+            content = content
+        )
+    }
 }
 
 @Composable

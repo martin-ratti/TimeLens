@@ -24,7 +24,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.timelens.app.domain.model.AppCategory
 import com.timelens.app.presentation.theme.*
 
@@ -96,10 +95,11 @@ fun AppUsageCard(
                                 )
                             }
                             else -> {
-                                AsyncImage(
-                                    model = icon,
+                                Icon(
+                                    imageVector = Icons.Outlined.CameraAlt,
                                     contentDescription = null,
-                                    modifier = Modifier.size(28.dp)
+                                    tint = accentColor,
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }

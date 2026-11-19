@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        targetNavRoute.value = intent?.getStringExtra("EXTRA_NAV_ROUTE")
+        targetNavRoute.value = sanitizeNavRoute(intent?.getStringExtra("EXTRA_NAV_ROUTE"))
 
         val startDestination = if (checkUsagePermissionUseCase()) {
             NavRoutes.Home.route
@@ -45,7 +45,11 @@ class MainActivity : ComponentActivity() {
             TimeLensTheme(themeMode = themeMode) {
                 AppNavHost(
                     startDestination = startDestination,
-                    navigateToRoute = navigateToRoute
+                    navigateToRoute = navigateToRoute,
+                    onNavRouteConsumed = {
+                        targetNavRoute.value = null
+                        intent?.removeExtra("EXTRA_NAV_ROUTE")
+                    }
                 )
             }
         }
@@ -59,6 +63,28 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        targetNavRoute.value = intent.getStringExtra("EXTRA_NAV_ROUTE")
+        targetNavRoute.value = sanitizeNavRoute(intent.getStringExtra("EXTRA_NAV_ROUTE"))
+    }
+
+    companion object {
+        private val ALLOWED_STATIC_ROUTES = setOf(
+            NavRoutes.Home.route,
+            NavRoutes.History.route,
+            NavRoutes.Settings.route,
+            NavRoutes.Onboarding.route,
+            "daily_summary",
+            "daily_debrief",
+            "daily_summary_night"
+        )
+        private val APP_DETAIL_REGEX = Regex("^app_detail/[a-zA-Z0-9_.]+$")
+
+        fun sanitizeNavRoute(rawRoute: String?): String? {
+            val candidate = rawRoute?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            return if (candidate in ALLOWED_STATIC_ROUTES || APP_DETAIL_REGEX.matches(candidate)) {
+                candidate
+            } else {
+                null
+            }
+        }
     }
 }

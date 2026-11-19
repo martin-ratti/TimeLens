@@ -33,14 +33,16 @@ import androidx.compose.runtime.setValue
 fun AppNavHost(
     modifier: Modifier = Modifier,
     startDestination: String = NavRoutes.Home.route,
-    navigateToRoute: String? = null
+    navigateToRoute: String? = null,
+    onNavRouteConsumed: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     var openDebriefOnHome by remember { mutableStateOf(false) }
 
     LaunchedEffect(navigateToRoute) {
-        if (!navigateToRoute.isNullOrBlank()) {
-            if (navigateToRoute == "daily_summary" || navigateToRoute == "daily_debrief" || navigateToRoute == "daily_summary_night") {
+        val validRoute = com.timelens.app.presentation.MainActivity.sanitizeNavRoute(navigateToRoute)
+        if (validRoute != null) {
+            if (validRoute == "daily_summary" || validRoute == "daily_debrief" || validRoute == "daily_summary_night") {
                 openDebriefOnHome = true
                 navController.navigate(NavRoutes.Home.route) {
                     popUpTo(navController.graph.findStartDestination().id) {
@@ -49,10 +51,13 @@ fun AppNavHost(
                     launchSingleTop = true
                 }
             } else {
-                navController.navigate(navigateToRoute) {
+                navController.navigate(validRoute) {
                     launchSingleTop = true
                 }
             }
+            onNavRouteConsumed()
+        } else if (!navigateToRoute.isNullOrBlank()) {
+            onNavRouteConsumed()
         }
     }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -134,8 +139,14 @@ fun AppNavHost(
             composable(NavRoutes.Onboarding.route) {
                 OnboardingScreen(
                     onOpenSettings = {
-                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                        context.startActivity(intent)
+                        try {
+                            val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                            context.startActivity(intent)
+                        } catch (e: android.content.ActivityNotFoundException) {
+                            runCatching {
+                                context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                            }
+                        }
                     },
                     onPermissionGranted = {
                         navController.navigate(NavRoutes.Home.route) {

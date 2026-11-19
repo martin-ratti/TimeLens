@@ -7,6 +7,7 @@ import com.timelens.app.data.local.prefs.UserPreferencesManager
 import com.timelens.app.domain.model.AppDetailInfo
 import com.timelens.app.domain.repository.UsageRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -56,6 +57,8 @@ class AppDetailViewModel @Inject constructor(
             try {
                 val detail = repository.getAppDetail(packageName)
                 _uiState.value = AppDetailUiState.Success(detail)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.value = AppDetailUiState.Error(e.message ?: "Error al cargar detalle")
             }
