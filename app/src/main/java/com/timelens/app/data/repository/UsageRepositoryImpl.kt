@@ -211,77 +211,83 @@ class UsageRepositoryImpl @Inject constructor(
             val startMs = startOfDayMillis(date, zoneId)
             val endMs = endOfDayMillis(date, zoneId)
 
-            val events = dataSource.getEventsForRange(startMs, endMs)
+                val events = dataSource.getEventsForRange(startMs, endMs)
+                if (events.isEmpty()) continue
 
-            if (events.isNotEmpty()) {
-                val metrics = SessionCalculator.calculateMetrics(
-                    eventsList = events,
-                    startTimeMs = startMs,
-                    isEligibleApp = { dataSource.isAppEligibleForStats(it) },
-                    evalCurrentTime = endMs,
-                    currentHour = if (date.isBefore(today)) 23 else LocalTime.now().hour
-                )
-
-                val validEntries = metrics.appUsageMap.entries
-                    .filter { it.value > 0L }
-                    .sortedByDescending { it.value }
-
-                val totalTime = validEntries.sumOf { it.value }
-
-                if (totalTime > 0) {
-                    val topApps = validEntries.take(25).map { (packageName, totalTimeMs) ->
-                        AppUsageInfo(
-                            packageName = packageName,
-                            appName = dataSource.getAppName(packageName),
-                            icon = null,
-                            totalTimeMs = totalTimeMs,
-                            sessionCount = metrics.appSessionCountMap[packageName] ?: 0,
-                            longestSessionMs = metrics.appLongestSessionMap[packageName] ?: 0L,
-                            category = dataSource.getAppCategory(packageName)
-                        )
-                    }
-                    val longestSessionAppInfo = topApps.find { it.packageName == metrics.longestSessionAppPackage }
-                    val longestSession = if (metrics.longestSessionAppPackage != null && metrics.longestSessionMs > 0) {
-                        Session(
-                            packageName = metrics.longestSessionAppPackage,
-                            appName = longestSessionAppInfo?.appName ?: dataSource.getAppName(metrics.longestSessionAppPackage),
-                            durationMs = metrics.longestSessionMs,
-                            startTimeMs = 0L,
-                            endTimeMs = metrics.longestSessionMs
-                        )
-                    } else null
-
-                    val summary = DaySummary(
-                        date = date,
-                        totalScreenTimeMs = totalTime,
-                        totalUnlocks = metrics.totalUnlocks,
-                        topApps = topApps,
-                        longestSession = longestSession,
-                        peakHour = metrics.peakHour,
-                        productiveHour = metrics.productiveHour,
-                        totalSessions = metrics.totalSessions
-                    )
-                    saveDaySummary(summary)
-                }
+                val summary = buildHistoricalDaySummary(date, events, startMs, endMs) ?: continue
+                saveDaySummary(summary)
             }
         }
+    }
+
+    private fun buildHistoricalDaySummary(
+        date: LocalDate,
+        events: List<android.app.usage.UsageEvents.Event>,
+        startMs: Long,
+        endMs: Long
+    ): DaySummary? {
+        val metrics = SessionCalculator.calculateMetrics(
+            eventsList = events,
+            startTimeMs = startMs,
+            isEligibleApp = { dataSource.isAppEligibleForStats(it) },
+            evalCurrentTime = endMs,
+            currentHour = 23
+        )
+
+        val validEntries = metrics.appUsageMap.entries
+            .filter { it.value > 0L }
+            .sortedByDescending { it.value }
+
+        val totalTime = validEntries.sumOf { it.value }
+        if (totalTime <= 0L) return null
+
+        val topApps = validEntries.take(25).map { (packageName, totalTimeMs) ->
+            AppUsageInfo(
+                packageName = packageName,
+                appName = dataSource.getAppName(packageName),
+                icon = null,
+                totalTimeMs = totalTimeMs,
+                sessionCount = metrics.appSessionCountMap[packageName] ?: 0,
+                longestSessionMs = metrics.appLongestSessionMap[packageName] ?: 0L,
+                category = dataSource.getAppCategory(packageName)
+            )
+        }
+        val longestSessionAppInfo = topApps.find { it.packageName == metrics.longestSessionAppPackage }
+        val longestSession = if (metrics.longestSessionAppPackage != null && metrics.longestSessionMs > 0) {
+            Session(
+                packageName = metrics.longestSessionAppPackage,
+                appName = longestSessionAppInfo?.appName ?: dataSource.getAppName(metrics.longestSessionAppPackage),
+                durationMs = metrics.longestSessionMs,
+                startTimeMs = 0L,
+                endTimeMs = metrics.longestSessionMs
+            )
+        } else null
+
+        return DaySummary(
+            date = date,
+            totalScreenTimeMs = totalTime,
+            totalUnlocks = metrics.totalUnlocks,
+            topApps = topApps,
+            longestSession = longestSession,
+            peakHour = metrics.peakHour,
+            productiveHour = metrics.productiveHour,
+            totalSessions = metrics.totalSessions
+        )
     }
 
     override suspend fun getAppDetail(packageName: String): com.timelens.app.domain.model.AppDetailInfo = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val cachedEvents = cachedTodayEvents
         val cachedMetrics = cachedTodayMetrics
-        val canUseCache = cachedEvents != null &&
-            cachedMetrics != null &&
-            (now - cachedTodayFetchMs) < cacheTtlMs &&
+        val isCacheFresh = (now - cachedTodayFetchMs) < cacheTtlMs &&
             dataSource.isAppEligibleForStats(packageName)
 
         val events: List<android.app.usage.UsageEvents.Event>
         val metrics: com.timelens.app.domain.util.MetricsResult
 
-        if (canUseCache) {
-            events = cachedEvents!!
-            metrics = cachedMetrics!!
+        if (isCacheFresh && cachedEvents != null && cachedMetrics != null) {
+            events = cachedEvents
+            metrics = cachedMetrics
         } else {
             val today = LocalDate.now()
             val startMs = startOfDayMillis(today)

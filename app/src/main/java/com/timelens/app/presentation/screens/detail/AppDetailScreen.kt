@@ -353,27 +353,28 @@ fun AppDetailContent(
         item {
             val frequencyText = remember(detail.sessionCount, detail.hourlyUsageMs, detail.lastUsedTimestampMs) {
                 val activeHours = detail.hourlyUsageMs.filter { it.value > 0L }.keys
-                if (detail.sessionCount > 1 && activeHours.isNotEmpty()) {
-                    val firstHour = activeHours.minOrNull() ?: 8
-                    val lastHour = (activeHours.maxOrNull() ?: firstHour) + 1
-                    val windowMinutes = ((lastHour - firstHour).coerceAtLeast(1)) * 60
-                    val intervalMins = (windowMinutes / detail.sessionCount).coerceAtLeast(1)
-                    if (intervalMins >= 60) {
-                        val h = intervalMins / 60
-                        val m = intervalMins % 60
-                        if (m > 0) "Cada ~${h}h ${m}m" else "Cada ~${h}h"
-                    } else {
-                        "Cada ~$intervalMins min"
+                when {
+                    detail.sessionCount > 1 && activeHours.isNotEmpty() -> {
+                        val firstHour = activeHours.minOrNull() ?: 8
+                        val lastHour = (activeHours.maxOrNull() ?: firstHour) + 1
+                        val windowMinutes = ((lastHour - firstHour).coerceAtLeast(1)) * 60
+                        val intervalMins = (windowMinutes / detail.sessionCount).coerceAtLeast(1)
+                        if (intervalMins >= 60) {
+                            val h = intervalMins / 60
+                            val m = intervalMins % 60
+                            if (m > 0) "Cada ~${h}h ${m}m" else "Cada ~${h}h"
+                        } else {
+                            "Cada ~$intervalMins min"
+                        }
                     }
-                } else if (detail.lastUsedTimestampMs > 0L) {
-                    val lastTime = java.time.Instant.ofEpochMilli(detail.lastUsedTimestampMs)
-                        .atZone(java.time.ZoneId.systemDefault())
-                        .toLocalTime()
-                    String.format(java.util.Locale.getDefault(), "Últ. vez %02d:%02d hs", lastTime.hour, lastTime.minute)
-                } else if (detail.sessionCount == 1) {
-                    "1 apertura hoy"
-                } else {
-                    "Sin aperturas hoy"
+                    detail.lastUsedTimestampMs > 0L -> {
+                        val lastTime = java.time.Instant.ofEpochMilli(detail.lastUsedTimestampMs)
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toLocalTime()
+                        String.format(java.util.Locale.getDefault(), "Últ. vez %02d:%02d hs", lastTime.hour, lastTime.minute)
+                    }
+                    detail.sessionCount == 1 -> "1 apertura hoy"
+                    else -> "Sin aperturas hoy"
                 }
             }
 
