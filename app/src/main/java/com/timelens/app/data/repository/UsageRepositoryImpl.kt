@@ -211,12 +211,11 @@ class UsageRepositoryImpl @Inject constructor(
             val startMs = startOfDayMillis(date, zoneId)
             val endMs = endOfDayMillis(date, zoneId)
 
-                val events = dataSource.getEventsForRange(startMs, endMs)
-                if (events.isEmpty()) continue
+            val events = dataSource.getEventsForRange(startMs, endMs)
+            if (events.isEmpty()) continue
 
-                val summary = buildHistoricalDaySummary(date, events, startMs, endMs) ?: continue
-                saveDaySummary(summary)
-            }
+            val summary = buildHistoricalDaySummary(date, events, startMs, endMs) ?: continue
+            saveDaySummary(summary)
         }
     }
 
