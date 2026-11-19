@@ -4,6 +4,8 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
+import com.timelens.app.data.local.db.entity.AppDailyUsageEntity
 import com.timelens.app.data.local.db.entity.DailyUsageEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -12,6 +14,25 @@ interface DailyUsageDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(dailyUsage: DailyUsageEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAppUsages(apps: List<AppDailyUsageEntity>)
+
+    @Query("DELETE FROM app_daily_usage WHERE date = :date")
+    suspend fun deleteAppUsagesByDate(date: String)
+
+    @Transaction
+    suspend fun saveDayWithApps(
+        dailyUsage: DailyUsageEntity,
+        apps: List<AppDailyUsageEntity>
+    ) {
+        insertOrUpdate(dailyUsage)
+        deleteAppUsagesByDate(dailyUsage.date)
+        val distinctApps = apps.distinctBy { it.packageName }
+        if (distinctApps.isNotEmpty()) {
+            insertAppUsages(distinctApps)
+        }
+    }
 
     @Query("SELECT * FROM daily_usage WHERE date = :date")
     suspend fun getByDate(date: String): DailyUsageEntity?

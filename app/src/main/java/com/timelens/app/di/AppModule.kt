@@ -25,7 +25,9 @@ object AppModule {
             context,
             TimeLensDatabase::class.java,
             "timelens_db"
-        ).build()
+        )
+            .addMigrations(TimeLensDatabase.MIGRATION_1_2)
+            .build()
     }
 
     @Provides

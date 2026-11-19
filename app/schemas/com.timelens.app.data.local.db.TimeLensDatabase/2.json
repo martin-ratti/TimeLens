@@ -1,0 +1,170 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "0bec9645f40d52d599a52796ecc8f682",
+    "entities": [
+      {
+        "tableName": "daily_usage",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`date` TEXT NOT NULL, `totalScreenTimeMs` INTEGER NOT NULL, `totalUnlocks` INTEGER NOT NULL, `longestSessionMs` INTEGER NOT NULL, `longestSessionApp` TEXT NOT NULL, `topAppPackage` TEXT NOT NULL, `topAppTimeMs` INTEGER NOT NULL, `totalSessions` INTEGER NOT NULL, `peakHour` INTEGER NOT NULL, `productiveHour` INTEGER NOT NULL, PRIMARY KEY(`date`))",
+        "fields": [
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalScreenTimeMs",
+            "columnName": "totalScreenTimeMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalUnlocks",
+            "columnName": "totalUnlocks",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "longestSessionMs",
+            "columnName": "longestSessionMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "longestSessionApp",
+            "columnName": "longestSessionApp",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "topAppPackage",
+            "columnName": "topAppPackage",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "topAppTimeMs",
+            "columnName": "topAppTimeMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalSessions",
+            "columnName": "totalSessions",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "peakHour",
+            "columnName": "peakHour",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "productiveHour",
+            "columnName": "productiveHour",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "date"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "app_daily_usage",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` TEXT NOT NULL, `packageName` TEXT NOT NULL, `appName` TEXT NOT NULL, `totalTimeMs` INTEGER NOT NULL, `sessionCount` INTEGER NOT NULL, `longestSessionMs` INTEGER NOT NULL, `category` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "packageName",
+            "columnName": "packageName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "appName",
+            "columnName": "appName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalTimeMs",
+            "columnName": "totalTimeMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sessionCount",
+            "columnName": "sessionCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "longestSessionMs",
+            "columnName": "longestSessionMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "category",
+            "columnName": "category",
+            "affinity": "TEXT",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_app_daily_usage_date_packageName",
+            "unique": true,
+            "columnNames": [
+              "date",
+              "packageName"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_app_daily_usage_date_packageName` ON `${TABLE_NAME}` (`date`, `packageName`)"
+          },
+          {
+            "name": "index_app_daily_usage_packageName",
+            "unique": false,
+            "columnNames": [
+              "packageName"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_app_daily_usage_packageName` ON `${TABLE_NAME}` (`packageName`)"
+          }
+        ],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0bec9645f40d52d599a52796ecc8f682')"
+    ]
+  }
+}

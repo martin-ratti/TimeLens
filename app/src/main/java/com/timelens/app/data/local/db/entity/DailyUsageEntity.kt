@@ -14,5 +14,6 @@ data class DailyUsageEntity(
     val topAppPackage: String,
     val topAppTimeMs: Long,
     val totalSessions: Int,
-    val peakHour: Int
+    val peakHour: Int,
+    val productiveHour: Int = 9
 )

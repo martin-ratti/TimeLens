@@ -21,6 +21,7 @@ fun DailyUsageEntity.toDomain(topApps: List<AppUsageInfo>, appName: String): Day
             )
         } else null,
         peakHour = this.peakHour,
+        productiveHour = this.productiveHour,
         totalSessions = this.totalSessions
     )
 }
@@ -47,7 +48,8 @@ fun DaySummary.toEntity(): DailyUsageEntity {
         topAppPackage = this.topApps.firstOrNull()?.packageName ?: "",
         topAppTimeMs = this.topApps.firstOrNull()?.totalTimeMs ?: 0L,
         totalSessions = this.totalSessions,
-        peakHour = this.peakHour
+        peakHour = this.peakHour,
+        productiveHour = this.productiveHour
     )
 }
 
