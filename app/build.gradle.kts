@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,28 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
 }
+
+val keystoreProps = Properties().apply {
+    listOf("local.properties", "keystore.properties").forEach { fileName ->
+        val file = rootProject.file(fileName)
+        if (file.exists()) {
+            file.inputStream().use { load(it) }
+        }
+    }
+}
+
+fun resolveSigningProp(key: String): String? =
+    System.getenv(key)?.takeIf { it.isNotBlank() }
+        ?: keystoreProps.getProperty(key)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFilePath = resolveSigningProp("RELEASE_STORE_FILE")
+val releaseStorePassword = resolveSigningProp("RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = resolveSigningProp("RELEASE_KEY_ALIAS")
+val releaseKeyPassword = resolveSigningProp("RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = !releaseStoreFilePath.isNullOrBlank() &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
 
 android {
     namespace = "com.timelens.app"
@@ -20,18 +44,33 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigning) {
+                storeFile = rootProject.file(releaseStoreFilePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
         debug {
-            isDebuggable = false
+            isDebuggable = true
             applicationIdSuffix = ".debug"
         }
     }
@@ -47,11 +86,16 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -81,10 +125,6 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
-    // Charts (Vico)
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
-
     // WorkManager
     implementation(libs.androidx.work.runtime)
 
@@ -94,9 +134,6 @@ dependencies {
     // Lifecycle
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-
-    // Image Loading
-    implementation(libs.coil.compose)
 
     // Widgets (Jetpack Glance)
     implementation(libs.androidx.glance.appwidget)
