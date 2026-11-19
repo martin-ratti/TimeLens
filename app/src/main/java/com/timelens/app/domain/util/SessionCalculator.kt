@@ -68,7 +68,8 @@ object SessionCalculator {
         eventsList: List<UsageEvents.Event>,
         startTimeMs: Long,
         isEligibleApp: (String) -> Boolean = { true },
-        evalCurrentTime: Long? = null
+        evalCurrentTime: Long? = null,
+        currentHour: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     ): MetricsResult {
         val models = eventsList.map {
             UsageEventModel(
@@ -77,14 +78,15 @@ object SessionCalculator {
                 timeStamp = it.timeStamp
             )
         }
-        return calculateMetricsFromModels(models, startTimeMs, isEligibleApp, evalCurrentTime)
+        return calculateMetricsFromModels(models, startTimeMs, isEligibleApp, evalCurrentTime, currentHour)
     }
 
     fun calculateMetricsFromModels(
         eventsList: List<UsageEventModel>,
         startTimeMs: Long,
         isEligibleApp: (String) -> Boolean = { true },
-        evalCurrentTime: Long? = null
+        evalCurrentTime: Long? = null,
+        currentHour: Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     ): MetricsResult {
         var unlocks = 0
         var longestSessionMs = 0L
@@ -189,7 +191,7 @@ object SessionCalculator {
         }
 
         val peakHour = hourUsageMap.maxByOrNull { it.value }?.key ?: 0
-        val productiveHour = calculateProductiveHour(hourUsageMap)
+        val productiveHour = calculateProductiveHour(hourUsageMap, currentHour = currentHour)
         val totalSessions = appSessionCountMap.values.sum()
 
         return MetricsResult(

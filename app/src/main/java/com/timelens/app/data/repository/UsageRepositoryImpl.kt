@@ -2,8 +2,6 @@ package com.timelens.app.data.repository
 
 import com.timelens.app.data.local.db.dao.AppDailyUsageDao
 import com.timelens.app.data.local.db.dao.DailyUsageDao
-import com.timelens.app.data.local.db.entity.AppDailyUsageEntity
-import com.timelens.app.data.local.db.entity.DailyUsageEntity
 import com.timelens.app.data.local.db.entity.toDomain
 import com.timelens.app.data.local.db.entity.toEntity
 import com.timelens.app.data.local.usage.UsageDataSource
@@ -13,9 +11,10 @@ import com.timelens.app.domain.model.Session
 import com.timelens.app.domain.repository.UsageRepository
 import com.timelens.app.domain.util.SessionCalculator
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,18 +43,23 @@ class UsageRepositoryImpl @Inject constructor(
         const val MAX_RETENTION_DAYS = 30
     }
 
+    private fun startOfDayMillis(date: LocalDate, zoneId: ZoneId = ZoneId.systemDefault()): Long {
+        return date.atStartOfDay(zoneId).toInstant().toEpochMilli()
+    }
+
+    private fun endOfDayMillis(date: LocalDate, zoneId: ZoneId = ZoneId.systemDefault()): Long {
+        return date.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli() - 1L
+    }
+
     override suspend fun getTodaySummary(): DaySummary = withContext(Dispatchers.IO) {
-        val calendar = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, 0)
-            set(java.util.Calendar.MINUTE, 0)
-            set(java.util.Calendar.SECOND, 0)
-            set(java.util.Calendar.MILLISECOND, 0)
-        }
+        val today = LocalDate.now()
+        val startMs = startOfDayMillis(today)
         val events = dataSource.getDailyEvents()
         val metrics = SessionCalculator.calculateMetrics(
             eventsList = events,
-            startTimeMs = calendar.timeInMillis,
-            isEligibleApp = { dataSource.isAppEligibleForStats(it) }
+            startTimeMs = startMs,
+            isEligibleApp = { dataSource.isAppEligibleForStats(it) },
+            currentHour = LocalTime.now().hour
         )
 
         cachedTodayEvents = events
@@ -93,7 +97,7 @@ class UsageRepositoryImpl @Inject constructor(
         } else null
 
         val summary = DaySummary(
-            date = LocalDate.now(),
+            date = today,
             totalScreenTimeMs = totalTime,
             totalUnlocks = metrics.totalUnlocks,
             topApps = topApps,
@@ -110,18 +114,25 @@ class UsageRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getAppUsageToday(): List<AppUsageInfo> = withContext(Dispatchers.IO) {
-        val calendar = java.util.Calendar.getInstance().apply {
-            set(java.util.Calendar.HOUR_OF_DAY, 0)
-            set(java.util.Calendar.MINUTE, 0)
-            set(java.util.Calendar.SECOND, 0)
-            set(java.util.Calendar.MILLISECOND, 0)
+        val now = System.currentTimeMillis()
+        val cachedMetrics = cachedTodayMetrics
+        val metrics = if (cachedMetrics != null && (now - cachedTodayFetchMs) < cacheTtlMs) {
+            cachedMetrics
+        } else {
+            val today = LocalDate.now()
+            val startMs = startOfDayMillis(today)
+            val events = dataSource.getDailyEvents()
+            SessionCalculator.calculateMetrics(
+                eventsList = events,
+                startTimeMs = startMs,
+                isEligibleApp = { dataSource.isAppEligibleForStats(it) },
+                currentHour = LocalTime.now().hour
+            ).also {
+                cachedTodayEvents = events
+                cachedTodayMetrics = it
+                cachedTodayFetchMs = now
+            }
         }
-        val events = dataSource.getDailyEvents()
-        val metrics = SessionCalculator.calculateMetrics(
-            eventsList = events,
-            startTimeMs = calendar.timeInMillis,
-            isEligibleApp = { dataSource.isAppEligibleForStats(it) }
-        )
 
         metrics.appUsageMap.map { (packageName, totalTimeMs) ->
             AppUsageInfo(
@@ -185,6 +196,7 @@ class UsageRepositoryImpl @Inject constructor(
         dailyUsageDao.deleteOlderThan(cutoffDate)
         appDailyUsageDao.deleteOlderThan(cutoffDate)
 
+        val zoneId = ZoneId.systemDefault()
         // Android solo conserva eventos recientes: los días ya pasados sin registro se intentan
         // recuperar; los que el sistema ya no tiene simplemente no se inventan.
         for (i in 1 until MAX_RETENTION_DAYS) {
@@ -196,15 +208,8 @@ class UsageRepositoryImpl @Inject constructor(
                 continue
             }
 
-            val targetCal = java.util.Calendar.getInstance().apply {
-                add(java.util.Calendar.DAY_OF_YEAR, -i)
-                set(java.util.Calendar.HOUR_OF_DAY, 0)
-                set(java.util.Calendar.MINUTE, 0)
-                set(java.util.Calendar.SECOND, 0)
-                set(java.util.Calendar.MILLISECOND, 0)
-            }
-            val startMs = targetCal.timeInMillis
-            val endMs = startMs + (24 * 60 * 60 * 1000L) - 1
+            val startMs = startOfDayMillis(date, zoneId)
+            val endMs = endOfDayMillis(date, zoneId)
 
             val events = dataSource.getEventsForRange(startMs, endMs)
 
@@ -213,7 +218,8 @@ class UsageRepositoryImpl @Inject constructor(
                     eventsList = events,
                     startTimeMs = startMs,
                     isEligibleApp = { dataSource.isAppEligibleForStats(it) },
-                    evalCurrentTime = endMs
+                    evalCurrentTime = endMs,
+                    currentHour = if (date.isBefore(today)) 23 else LocalTime.now().hour
                 )
 
                 val validEntries = metrics.appUsageMap.entries
@@ -277,17 +283,14 @@ class UsageRepositoryImpl @Inject constructor(
             events = cachedEvents!!
             metrics = cachedMetrics!!
         } else {
-            val calendar = java.util.Calendar.getInstance().apply {
-                set(java.util.Calendar.HOUR_OF_DAY, 0)
-                set(java.util.Calendar.MINUTE, 0)
-                set(java.util.Calendar.SECOND, 0)
-                set(java.util.Calendar.MILLISECOND, 0)
-            }
+            val today = LocalDate.now()
+            val startMs = startOfDayMillis(today)
             events = dataSource.getDailyEvents()
             metrics = SessionCalculator.calculateMetrics(
                 eventsList = events,
-                startTimeMs = calendar.timeInMillis,
-                isEligibleApp = { pkg -> pkg == packageName || dataSource.isAppEligibleForStats(pkg) }
+                startTimeMs = startMs,
+                isEligibleApp = { pkg -> pkg == packageName || dataSource.isAppEligibleForStats(pkg) },
+                currentHour = LocalTime.now().hour
             )
         }
 
@@ -341,13 +344,8 @@ class UsageRepositoryImpl @Inject constructor(
 
     override suspend fun saveDaySummary(summary: DaySummary) = withContext(Dispatchers.IO) {
         val dateString = summary.date.toString()
-        
-        dailyUsageDao.insertOrUpdate(summary.toEntity())
-        appDailyUsageDao.deleteByDate(dateString)
-
         val appEntities = summary.topApps.map { it.toEntity(dateString) }
-        
-        appDailyUsageDao.insertAll(appEntities)
+        dailyUsageDao.saveDayWithApps(summary.toEntity(), appEntities)
     }
 
     override fun hasUsagePermission(): Boolean {

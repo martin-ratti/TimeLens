@@ -32,31 +32,48 @@ class UsageDataSource @Inject constructor(
     private val categoryCache = ConcurrentHashMap<String, AppCategory>()
     private val eligibilityCache = ConcurrentHashMap<String, Boolean>()
 
-    // One-time fast batch query for all user-launchable apps
-    private val launchablePackages: Set<String> by lazy {
-        try {
+    @Volatile
+    private var cachedLaunchablePackages: Set<String> = emptySet()
+
+    @Volatile
+    private var lastLaunchableFetchMs: Long = 0L
+
+    private val launchableCacheTtlMs = 60_000L
+
+    private fun getLaunchablePackages(): Set<String> {
+        val now = System.currentTimeMillis()
+        val current = cachedLaunchablePackages
+        if (current.isNotEmpty() && (now - lastLaunchableFetchMs) < launchableCacheTtlMs) {
+            return current
+        }
+        return try {
             val intent = Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
-            packageManager.queryIntentActivities(intent, 0)
+            val refreshed = packageManager.queryIntentActivities(intent, 0)
                 .mapNotNull { it.activityInfo?.packageName }
                 .toSet()
+            if (refreshed != current) {
+                eligibilityCache.clear()
+                missingIconPackages.clear()
+            }
+            cachedLaunchablePackages = refreshed
+            lastLaunchableFetchMs = now
+            refreshed
         } catch (e: Exception) {
-            emptySet()
+            current
         }
     }
 
     fun getDailyUsageStats(): List<UsageStats> {
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
+        val startMs = java.time.LocalDate.now()
+            .atStartOfDay(java.time.ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
 
         return usageStatsManager.queryUsageStats(
             UsageStatsManager.INTERVAL_DAILY,
-            calendar.timeInMillis,
+            startMs,
             System.currentTimeMillis()
         ).filter { it.totalTimeInForeground > 0 }
     }
@@ -66,13 +83,11 @@ class UsageDataSource @Inject constructor(
     }
 
     fun getDailyEvents(): List<UsageEvents.Event> {
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        return getEventsForRange(calendar.timeInMillis, System.currentTimeMillis())
+        val startMs = java.time.LocalDate.now()
+            .atStartOfDay(java.time.ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+        return getEventsForRange(startMs, System.currentTimeMillis())
     }
 
     fun getEventsForRange(startTime: Long, endTime: Long): List<UsageEvents.Event> {
@@ -186,6 +201,7 @@ class UsageDataSource @Inject constructor(
     }
 
     fun isAppEligibleForStats(packageName: String): Boolean {
+        val launchable = getLaunchablePackages()
         return eligibilityCache.computeIfAbsent(packageName) { pkg ->
             val lowerPkg = pkg.lowercase()
             if (lowerPkg.contains("youtube") ||
@@ -207,7 +223,7 @@ class UsageDataSource @Inject constructor(
                 lowerPkg == "android") {
                 return@computeIfAbsent false
             }
-            launchablePackages.contains(pkg)
+            launchable.contains(pkg)
         }
     }
 

@@ -13,7 +13,8 @@ class GetWellnessReportUseCase @Inject constructor() {
         summary: DaySummary,
         yesterday: DaySummary?,
         goalHours: Int,
-        isNightReview: Boolean = false
+        isNightReview: Boolean = false,
+        dayElapsedFraction: Float = 1f
     ): WellnessReport {
         val insights = mutableListOf<WellnessInsight>()
         val goalMs = goalHours * 3600000L
@@ -212,16 +213,24 @@ class GetWellnessReportUseCase @Inject constructor() {
             }
         }
 
-        // 5. Regla de Comparación con Ayer
-        if (yesterday != null && yesterday.totalScreenTimeMs > 0) {
-            val diffMs = summary.totalScreenTimeMs - yesterday.totalScreenTimeMs
-            val diffPercent = (diffMs.toFloat() / yesterday.totalScreenTimeMs) * 100
+        // 5. Regla de Comparación con Ayer (escalando el total de ayer por la fracción del día transcurrida)
+        val clampedFraction = if (isNightReview) 1f else dayElapsedFraction.coerceIn(0.15f, 1f)
+        val scaledYesterdayMs = if (yesterday != null && yesterday.totalScreenTimeMs > 0) {
+            (yesterday.totalScreenTimeMs * clampedFraction).toLong().coerceAtLeast(1L)
+        } else {
+            0L
+        }
+
+        if (scaledYesterdayMs > 0L) {
+            val diffMs = summary.totalScreenTimeMs - scaledYesterdayMs
+            val diffPercent = (diffMs.toFloat() / scaledYesterdayMs) * 100
+            val compSuffix = if (clampedFraction < 0.95f) "que el ritmo de ayer a esta hora" else "que ayer"
             if (diffPercent <= -15f) {
                 insights.add(
                     WellnessInsight(
                         id = "progress_yesterday",
                         title = "Reducción de pantalla (-${abs(diffPercent).roundToInt()}%)",
-                        message = "Usaste el teléfono ${TimeFormatter.formatMillisToShort(abs(diffMs))} menos que ayer a esta hora.",
+                        message = "Usaste el teléfono ${TimeFormatter.formatMillisToShort(abs(diffMs))} menos $compSuffix.",
                         actionTip = "¡Gran progreso! Consolidar hábitos más conscientes te permite ganar tiempo propio de calidad.",
                         level = InsightLevel.EXCELLENT,
                         category = InsightCategory.SCREEN_TIME
@@ -232,7 +241,7 @@ class GetWellnessReportUseCase @Inject constructor() {
                     WellnessInsight(
                         id = "increase_yesterday",
                         title = "Aumento de pantalla (+${diffPercent.roundToInt()}%)",
-                        message = "Tu tiempo en pantalla subió ${TimeFormatter.formatMillisToShort(diffMs)} frente a ayer.",
+                        message = "Tu tiempo en pantalla subió ${TimeFormatter.formatMillisToShort(diffMs)} más $compSuffix.",
                         actionTip = "Observá qué apps generaron el pico para distinguir tareas necesarias de ocio desmedido.",
                         level = InsightLevel.ATTENTION,
                         category = InsightCategory.SCREEN_TIME
