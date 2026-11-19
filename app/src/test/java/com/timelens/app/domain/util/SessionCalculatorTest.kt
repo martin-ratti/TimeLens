@@ -296,4 +296,35 @@ class SessionCalculatorTest {
         assertEquals(20 * 60 * 1000L, hourly[11])
         assertEquals(20 * 60 * 1000L, hourly[12])
     }
+
+    @Test
+    fun `calculateMetrics evaluates full active window up to 21 when currentHour is 23 for past days`() {
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 8)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val base8 = cal.timeInMillis
+
+        // Fill hours 8..19 with 30 minutes of usage, leave hour 20 with 0 usage, hour 21 with 30 min
+        // Use eventType = 16 (Screen off) so each session is closed immediately
+        val events = mutableListOf<UsageEventModel>()
+        for (h in 8..21) {
+            if (h == 20) continue
+            val hourStart = base8 + (h - 8) * 3_600_000L
+            events.add(UsageEventModel("com.app.test", 1, hourStart))
+            events.add(UsageEventModel("com.app.test", 16, hourStart + 30 * 60 * 1000L))
+        }
+
+        val pastDayMetrics = SessionCalculator.calculateMetricsFromModels(
+            eventsList = events,
+            startTimeMs = base8 - 3_600_000L,
+            evalCurrentTime = base8 + 16 * 3_600_000L,
+            currentHour = 23
+        )
+
+        // Because currentHour = 23 evaluates the full 8..21 window, hour 20 (with 0 usage) is chosen
+        assertEquals(20, pastDayMetrics.productiveHour)
+    }
 }

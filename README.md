@@ -54,11 +54,10 @@ Si es tu primer proyecto de Android:
 
 - **Lenguaje:** [Kotlin](https://kotlinlang.org/) (100%)
 - **UI:** [Jetpack Compose](https://developer.android.com/jetpack/compose) + Material Design 3
-- **Iconos:** Material Icons Extended
-- **Carga de imágenes / Iconos de apps:** Coil Compose
+- **Iconos:** Material Icons Extended & renderizado nativo de íconos en `ImageBitmap`
 - **Arquitectura:** Clean Architecture + MVVM + Unidirectional Data Flow (UDF)
 - **Inyección de Dependencias:** [Hilt](https://dagger.dev/hilt/)
-- **Persistencia Local:** [Room](https://developer.android.com/training/data-storage/room) & DataStore Preferences
+- **Persistencia Local:** [Room](https://developer.android.com/training/data-storage/room) & SharedPreferences reactivo (`StateFlow`)
 - **Tareas en Segundo Plano:** [WorkManager](https://developer.android.com/topic/libraries/architecture/workmanager)
 - **Navegación:** Navigation Compose con rutas seguras y paso de argumentos
 - **Gráficos:** Componentes nativos optimizados con Compose Canvas

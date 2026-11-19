@@ -98,7 +98,7 @@ class UsageRepositoryImplTest {
     }
 
     @Test
-    fun `saveDaySummary inserts entity and app usage records into DAOs`() = runTest {
+    fun `saveDaySummary delegates atomically to dailyUsageDao saveDayWithApps`() = runTest {
         val summary = DaySummary(
             date = LocalDate.of(2026, 9, 30),
             totalScreenTimeMs = 5000000L,
@@ -106,15 +106,18 @@ class UsageRepositoryImplTest {
             topApps = emptyList(),
             longestSession = null,
             peakHour = 12,
-            productiveHour = 9,
+            productiveHour = 11,
             totalSessions = 10
         )
 
         repository.saveDaySummary(summary)
 
-        coVerify { dailyUsageDao.insertOrUpdate(any()) }
-        coVerify { appDailyUsageDao.deleteByDate("2026-09-30") }
-        coVerify { appDailyUsageDao.insertAll(any()) }
+        coVerify(exactly = 1) {
+            dailyUsageDao.saveDayWithApps(
+                match { it.date == "2026-09-30" && it.productiveHour == 11 },
+                any()
+            )
+        }
     }
 
     @Test

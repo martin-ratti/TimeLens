@@ -21,7 +21,8 @@ class MappersTest {
             topAppPackage = "com.whatsapp",
             topAppTimeMs = 3600000L,
             totalSessions = 25,
-            peakHour = 19
+            peakHour = 19,
+            productiveHour = 11
         )
 
         val topApps = listOf(
@@ -46,6 +47,7 @@ class MappersTest {
         assertEquals("WhatsApp", domain.longestSession?.appName)
         assertEquals(1800000L, domain.longestSession?.durationMs)
         assertEquals(19, domain.peakHour)
+        assertEquals(11, domain.productiveHour)
         assertEquals(25, domain.totalSessions)
     }
 
@@ -148,6 +150,7 @@ class MappersTest {
         assertEquals(3000000L, entity.topAppTimeMs)
         assertEquals(12, entity.totalSessions)
         assertEquals(21, entity.peakHour)
+        assertEquals(10, entity.productiveHour)
     }
 
     @Test

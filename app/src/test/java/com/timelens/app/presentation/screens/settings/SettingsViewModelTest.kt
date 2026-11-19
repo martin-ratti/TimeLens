@@ -3,11 +3,11 @@ package com.timelens.app.presentation.screens.settings
 import android.content.Context
 import android.content.Intent
 import com.timelens.app.data.local.db.dao.DailyUsageDao
+import com.timelens.app.data.local.db.entity.DailyUsageEntity
 import com.timelens.app.data.local.prefs.UserPreferencesManager
 import com.timelens.app.fakes.FakePreferencesHelper
 import com.timelens.app.fakes.MainDispatcherRule
 import com.timelens.app.notification.TimeLensNotificationManager
-import com.timelens.app.service.UsageMonitorService
 import com.timelens.app.worker.NotificationWorkScheduler
 import io.mockk.*
 import org.junit.After
@@ -30,13 +30,11 @@ class SettingsViewModelTest {
     @Before
     fun setUp() {
         mockkObject(NotificationWorkScheduler)
-        mockkObject(UsageMonitorService)
 
         every { NotificationWorkScheduler.scheduleAll(any()) } just Runs
         every { NotificationWorkScheduler.cancelAll(any()) } just Runs
         every { NotificationWorkScheduler.triggerImmediateDailySummary(any()) } just Runs
         every { NotificationWorkScheduler.triggerImmediateAlertCheck(any()) } just Runs
-        every { UsageMonitorService.stop(any()) } just Runs
 
         prefsManager = FakePreferencesHelper.createFakeUserPreferencesManager()
         dailyUsageDao = mockk(relaxed = true)
@@ -91,13 +89,12 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `toggleNotifications false disables notifications, cancels workers and stops service`() {
+    fun `toggleNotifications false disables notifications and cancels workers`() {
         viewModel.toggleNotifications(false)
 
         assertFalse(viewModel.notificationsEnabled.value)
         verify { NotificationWorkScheduler.cancelAll(context) }
         verify { notificationManager.cancelAll() }
-        verify { UsageMonitorService.stop(context) }
     }
 
     @Test
@@ -148,5 +145,42 @@ class SettingsViewModelTest {
         )
 
         assertTrue(emptyCalled)
+    }
+
+    @Test
+    fun `sanitizeCsvCell neutralizes formula injection prefixes and escapes commas and quotes`() {
+        assertEquals("'=cmd|' /C calc'!A0", SettingsViewModel.sanitizeCsvCell("=cmd|' /C calc'!A0"))
+        assertEquals("'+SUM(A1:A2)", SettingsViewModel.sanitizeCsvCell("+SUM(A1:A2)"))
+        assertEquals("'-100", SettingsViewModel.sanitizeCsvCell("-100"))
+        assertEquals("'@IMPORTXML()", SettingsViewModel.sanitizeCsvCell("@IMPORTXML()"))
+        assertEquals("\"App, Inc.\"", SettingsViewModel.sanitizeCsvCell("App, Inc."))
+        assertEquals("\"App \"\"Pro\"\"\"", SettingsViewModel.sanitizeCsvCell("App \"Pro\""))
+        assertEquals("com.whatsapp", SettingsViewModel.sanitizeCsvCell("com.whatsapp"))
+    }
+
+    @Test
+    fun `buildCsvContent generates valid CSV with productiveHour and sanitized cells`() {
+        val days = listOf(
+            DailyUsageEntity(
+                date = "2026-10-01",
+                totalScreenTimeMs = 3_600_000L,
+                totalUnlocks = 18,
+                longestSessionMs = 1_200_000L,
+                longestSessionApp = "com.whatsapp",
+                topAppPackage = "=malicious.pkg",
+                topAppTimeMs = 1_800_000L,
+                totalSessions = 9,
+                peakHour = 20,
+                productiveHour = 10
+            )
+        )
+
+        val csv = SettingsViewModel.buildCsvContent(days)
+        val lines = csv.trim().lines()
+
+        assertEquals(2, lines.size)
+        assertTrue(lines[0].contains("HoraProductiva"))
+        assertTrue(lines[1].contains("'=malicious.pkg"))
+        assertTrue(lines[1].contains(",10:00,"))
     }
 }

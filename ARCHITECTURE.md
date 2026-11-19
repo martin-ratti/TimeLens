@@ -34,11 +34,10 @@ app/src/main/java/com/timelens/app/
 │   │   │   ├── TimeLensDatabase.kt
 │   │   │   ├── 📂 dao/      # AppDailyUsageDao, DailyUsageDao
 │   │   │   └── 📂 entity/   # AppDailyUsageEntity, DailyUsageEntity
+│   │   ├── 📂 prefs/        # Preferencias reactivas (SharedPreferences + StateFlow)
+│   │   │   └── UserPreferencesManager.kt # Objetivo diario, límites por app, tema y notificaciones
 │   │   └── 📂 usage/        # Proveedor del sistema Android
-│   │       ├── UsageDataSource.kt # Habla con UsageStatsManager y cachea íconos
-│   │       └── SessionCalculator.kt # Algoritmo de intervalos de pantalla
-│   ├── 📂 preferences/      # Preferencias reactivas (DataStore)
-│   │   └── UserPreferencesManager.kt # Objetivo diario, tema y notificaciones
+│   │       └── UsageDataSource.kt # Habla con UsageStatsManager y cachea íconos
 │   └── 📂 repository/       # Implementación UsageRepositoryImpl
 │
 ├── 📂 domain/               # 📖 EL LIBRO DE RECETAS (Reglas de negocio)
