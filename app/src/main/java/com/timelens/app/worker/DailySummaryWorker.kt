@@ -12,7 +12,9 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CancellationException
 import java.time.LocalDate
+import java.time.LocalTime
 
 class DailySummaryWorker(
     appContext: Context,
@@ -29,6 +31,7 @@ class DailySummaryWorker(
     }
 
     override suspend fun doWork(): Result {
+        val isManualTest = inputData.getBoolean("IS_MANUAL_TEST", false)
         return try {
             val entryPoint = EntryPointAccessors.fromApplication(
                 applicationContext,
@@ -39,36 +42,49 @@ class DailySummaryWorker(
                 return Result.success()
             }
 
-            val isManualTest = inputData.getBoolean("IS_MANUAL_TEST", false)
-            val currentHour = java.time.LocalTime.now().hour
-            val alertPrefs = applicationContext.getSharedPreferences("timelens_alerts_state", Context.MODE_PRIVATE)
-            val todayStr = LocalDate.now().toString()
-
-            // Evitar que WorkManager dispare el resumen nocturno fuera de horario (ej. a la mañana siguiente tras Doze)
             if (!isManualTest) {
-                if (currentHour !in 21..23) {
-                    return Result.success()
-                }
-                if (alertPrefs.getString("last_daily_summary_date", null) == todayStr) {
-                    return Result.success()
-                }
+                // Reprogramar el siguiente resumen diario de las 22:00 para mañana
+                NotificationWorkScheduler.scheduleDailySummary(
+                    context = applicationContext,
+                    forceNextDay = true
+                )
+            }
+
+            val currentHour = LocalTime.now().hour
+            val today = LocalDate.now()
+            val alertPrefs = applicationContext.getSharedPreferences("timelens_alerts_state", Context.MODE_PRIVATE)
+
+            // Ventana amplia (20:00..23:59 o 00:00..01:59 si Doze retrasó la ejecución pasando medianoche)
+            if (!isManualTest && !isWithinNightSummaryWindow(currentHour)) {
+                return Result.success()
+            }
+
+            val targetDate = resolveTargetSummaryDate(today, currentHour, isManualTest)
+            val targetDateStr = targetDate.toString()
+
+            if (!isManualTest && alertPrefs.getString("last_daily_summary_date", null) == targetDateStr) {
+                return Result.success()
             }
 
             val repository = entryPoint.repository()
             val notificationManager = entryPoint.notificationManager()
             val wellnessUseCase = entryPoint.wellnessReportUseCase()
 
-            val summary = repository.getTodaySummary()
-            val yesterday = repository.getDaySummary(LocalDate.now().minusDays(1))
+            val summary = if (targetDate == today) {
+                repository.getTodaySummary()
+            } else {
+                repository.getDaySummary(targetDate) ?: repository.getTodaySummary()
+            }
+            val previousDay = repository.getDaySummary(targetDate.minusDays(1))
             val goal = prefs.dailyGoalHours.value
 
-            val comparisonText = if (yesterday != null && yesterday.totalScreenTimeMs > 0) {
-                TimeFormatter.formatPercentageChange(summary.totalScreenTimeMs, yesterday.totalScreenTimeMs)
+            val comparisonText = if (previousDay != null && previousDay.totalScreenTimeMs > 0) {
+                TimeFormatter.formatPercentageChange(summary.totalScreenTimeMs, previousDay.totalScreenTimeMs)
             } else {
                 "Límite: ${goal}h"
             }
 
-            val report = wellnessUseCase(summary, yesterday, goal, isNightReview = true)
+            val report = wellnessUseCase(summary, previousDay, goal, isNightReview = true)
 
             val shown = notificationManager.showDailySummaryNotification(
                 summary = summary,
@@ -76,13 +92,33 @@ class DailySummaryWorker(
                 insight = report.primaryInsight
             )
             if (shown && !isManualTest) {
-                alertPrefs.edit().putString("last_daily_summary_date", todayStr).apply()
+                alertPrefs.edit().putString("last_daily_summary_date", targetDateStr).apply()
             }
 
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             e.printStackTrace()
             Result.retry()
+        }
+    }
+
+    companion object {
+        fun isWithinNightSummaryWindow(hour: Int): Boolean {
+            return hour in 20..23 || hour in 0..1
+        }
+
+        fun resolveTargetSummaryDate(
+            today: LocalDate,
+            currentHour: Int,
+            isManualTest: Boolean = false
+        ): LocalDate {
+            return if (!isManualTest && currentHour in 0..1) {
+                today.minusDays(1)
+            } else {
+                today
+            }
         }
     }
 }

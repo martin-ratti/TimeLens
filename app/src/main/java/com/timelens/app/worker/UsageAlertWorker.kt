@@ -1,6 +1,7 @@
 package com.timelens.app.worker
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.timelens.app.data.local.prefs.UserPreferencesManager
@@ -11,6 +12,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CancellationException
 import java.time.LocalDate
 
 class UsageAlertWorker(
@@ -39,17 +41,20 @@ class UsageAlertWorker(
 
             val isManualTest = inputData.getBoolean("IS_MANUAL_TEST", false)
             val currentHour = java.time.LocalTime.now().hour
-            // Respetar horario de descanso nocturno (23:00 a 07:59) para no enviar alertas tardías de madrugada
-            if (!isManualTest && (currentHour >= 23 || currentHour < 8)) {
+            // Respetar horario de descanso nocturno (23:00 a 07:59 inclusive 23:00..06:59) para no despertar UsageStatsManager
+            if (!isManualTest && isQuietSleepHour(currentHour)) {
                 return Result.success()
             }
+
+            val alertPrefs = applicationContext.getSharedPreferences("timelens_alerts_state", Context.MODE_PRIVATE)
+            val today = LocalDate.now()
+            val todayStr = today.toString()
+
+            pruneOldAlertKeys(alertPrefs, today)
 
             val repository = entryPoint.repository()
             val notificationManager = entryPoint.notificationManager()
             val summary = repository.getTodaySummary()
-
-            val alertPrefs = applicationContext.getSharedPreferences("timelens_alerts_state", Context.MODE_PRIVATE)
-            val todayStr = LocalDate.now().toString()
             val nowMs = System.currentTimeMillis()
 
             // Reiniciar el estado de alertas de sesión larga al cambiar de día
@@ -113,11 +118,16 @@ class UsageAlertWorker(
                 }
             }
 
-            // 4. Alertas de Límites por Aplicación
+            // 4. Alertas de Límites por Aplicación (reutilizando topApps o caché recién cargada)
             val appLimits = prefsManager.appLimits.value
             if (appLimits.isNotEmpty()) {
-                val appUsageList = repository.getAppUsageToday()
-                val appUsageMap = appUsageList.associateBy { it.packageName }
+                val summaryAppsMap = summary.topApps.associateBy { it.packageName }
+                val missingFromSummary = appLimits.keys.any { it !in summaryAppsMap }
+                val appUsageMap = if (missingFromSummary) {
+                    repository.getAppUsageToday().associateBy { it.packageName }
+                } else {
+                    summaryAppsMap
+                }
 
                 for ((pkg, limitMinutes) in appLimits) {
                     val appUsage = appUsageMap[pkg] ?: continue
@@ -148,9 +158,35 @@ class UsageAlertWorker(
             }
 
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             e.printStackTrace()
             Result.retry()
+        }
+    }
+
+    companion object {
+        private const val RETENTION_DAYS = 7L
+        private val DATE_SUFFIX_REGEX = Regex("_(\\d{4}-\\d{2}-\\d{2})$")
+
+        fun isQuietSleepHour(hour: Int): Boolean {
+            return hour >= 23 || hour < 8
+        }
+
+        fun pruneOldAlertKeys(prefs: SharedPreferences, today: LocalDate = LocalDate.now()) {
+            val cutoffDate = today.minusDays(RETENTION_DAYS)
+            val keysToRemove = prefs.all.keys.filter { key ->
+                if (!key.startsWith("app_limit_")) return@filter false
+                val datePart = DATE_SUFFIX_REGEX.find(key)?.groupValues?.getOrNull(1) ?: return@filter false
+                val parsed = runCatching { LocalDate.parse(datePart) }.getOrNull() ?: return@filter false
+                parsed.isBefore(cutoffDate)
+            }
+            if (keysToRemove.isNotEmpty()) {
+                val editor = prefs.edit()
+                keysToRemove.forEach { editor.remove(it) }
+                editor.apply()
+            }
         }
     }
 }

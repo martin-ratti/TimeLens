@@ -55,7 +55,25 @@ interface WidgetEntryPoint {
 
 object WidgetDataLoader {
 
-    suspend fun load(context: Context): WidgetUsageData {
+    @Volatile
+    private var cachedSnapshot: WidgetUsageData? = null
+
+    @Volatile
+    private var cachedSnapshotTimeMs: Long = 0L
+
+    private const val SNAPSHOT_TTL_MS = 10_000L
+
+    fun primeCache(data: WidgetUsageData) {
+        cachedSnapshot = data
+        cachedSnapshotTimeMs = System.currentTimeMillis()
+    }
+
+    suspend fun load(context: Context, forceRefresh: Boolean = false): WidgetUsageData {
+        val now = System.currentTimeMillis()
+        val existing = cachedSnapshot
+        if (!forceRefresh && existing != null && (now - cachedSnapshotTimeMs) < SNAPSHOT_TTL_MS) {
+            return existing
+        }
         return try {
             val entryPoint = EntryPointAccessors.fromApplication(
                 context.applicationContext,
@@ -65,7 +83,9 @@ object WidgetDataLoader {
             val goal = entryPoint.preferences().dailyGoalHours.value
 
             if (!repository.hasUsagePermission()) {
-                return WidgetUsageData(hasPermission = false, goalHours = goal)
+                return WidgetUsageData(hasPermission = false, goalHours = goal).also {
+                    primeCache(it)
+                }
             }
 
             val summary = repository.getTodaySummary()
@@ -80,7 +100,11 @@ object WidgetDataLoader {
                         icon = (app.icon as? androidx.compose.ui.graphics.ImageBitmap)?.asAndroidBitmap()
                     )
                 }
-            )
+            ).also {
+                primeCache(it)
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             WidgetUsageData(hasError = true)
         }

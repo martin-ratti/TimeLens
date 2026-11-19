@@ -16,29 +16,39 @@ object NotificationWorkScheduler {
     private const val UNIQUE_WORK_SUMMARY = "DailySummaryWorker"
     private const val UNIQUE_WORK_ALERTS = "UsageAlertWorker"
 
-    fun scheduleAll(context: Context) {
-        val workManager = WorkManager.getInstance(context)
-
-        // 1. Programar Resumen Diario para las 22:00 hs
-        val now = LocalDateTime.now()
+    fun calculateNext2200DelayMillis(
+        now: LocalDateTime = LocalDateTime.now(),
+        forceNextDay: Boolean = false
+    ): Long {
         var targetTime = now.withHour(22).withMinute(0).withSecond(0).withNano(0)
-        if (now.isAfter(targetTime)) {
+        if (forceNextDay || !now.isBefore(targetTime)) {
             targetTime = targetTime.plusDays(1)
         }
-        val initialDelay = Duration.between(now, targetTime).toMillis()
+        return Duration.between(now, targetTime).toMillis().coerceAtLeast(60_000L)
+    }
 
-        val summaryRequest = PeriodicWorkRequestBuilder<DailySummaryWorker>(
-            24, TimeUnit.HOURS,
-            30, TimeUnit.MINUTES
-        )
+    fun scheduleDailySummary(
+        context: Context,
+        forceNextDay: Boolean = false,
+        policy: ExistingWorkPolicy = ExistingWorkPolicy.REPLACE
+    ) {
+        val initialDelay = calculateNext2200DelayMillis(forceNextDay = forceNextDay)
+        val summaryRequest = OneTimeWorkRequestBuilder<DailySummaryWorker>()
             .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
             .build()
 
-        workManager.enqueueUniquePeriodicWork(
+        WorkManager.getInstance(context).enqueueUniqueWork(
             UNIQUE_WORK_SUMMARY,
-            ExistingPeriodicWorkPolicy.KEEP,
+            policy,
             summaryRequest
         )
+    }
+
+    fun scheduleAll(context: Context) {
+        val workManager = WorkManager.getInstance(context)
+
+        // 1. Programar Resumen Diario dinámico para las 22:00 hs con OneTimeWorkRequest
+        scheduleDailySummary(context, forceNextDay = false, policy = ExistingWorkPolicy.REPLACE)
 
         // 2. Programar Alertas Periódicas (cada 15 min)
         val alertsRequest = PeriodicWorkRequestBuilder<UsageAlertWorker>(

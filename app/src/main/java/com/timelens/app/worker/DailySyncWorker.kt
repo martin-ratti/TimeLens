@@ -8,6 +8,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CancellationException
 
 class DailySyncWorker(
     appContext: Context,
@@ -32,6 +33,8 @@ class DailySyncWorker(
             repository.getTodaySummary()
             
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             e.printStackTrace()
             Result.retry()
